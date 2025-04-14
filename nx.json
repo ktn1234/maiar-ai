@@ -6,22 +6,14 @@
       "outputs": ["{projectRoot}/dist/**"],
       "cache": true
     },
-    "build:client": {
-      "outputs": ["{projectRoot}/dist/**"],
-      "cache": true
-    },
+    "build:client": { "outputs": ["{projectRoot}/dist/**"], "cache": true },
     "build:starter": {
       "dependsOn": ["^build"],
       "outputs": ["{projectRoot}/dist/**"],
       "cache": true
     },
-    "build:website": {
-      "outputs": ["{projectRoot}/build/**"],
-      "cache": true
-    },
-    "lint": {
-      "cache": true
-    }
+    "build:website": { "outputs": ["{projectRoot}/build/**"], "cache": true },
+    "lint": { "cache": true }
   },
   "release": {
     "projects": ["packages/*"],
@@ -33,9 +25,7 @@
       "commitMessage": "chore(release): 🔖 create new tag and release %s"
     },
     "changelog": {
-      "workspaceChangelog": {
-        "createRelease": "github"
-      },
+      "workspaceChangelog": { "createRelease": "github" },
       "projectChangelogs": {
         "renderOptions": {
           "authors": true,
@@ -51,9 +41,7 @@
     {
       "plugin": "@nx/js/typescript",
       "options": {
-        "typecheck": {
-          "targetName": "tsc:typecheck"
-        },
+        "typecheck": { "targetName": "tsc:typecheck" },
         "build": {
           "targetName": "build",
           "configName": "tsconfig.lib.json",
@@ -62,5 +50,6 @@
         }
       }
     }
-  ]
+  ],
+  "nxCloudId": "67fca4d9ebe23f324e74a943"
 }
