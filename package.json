@@ -25,12 +25,13 @@
   "scripts": {
     "prepare": "husky",
     "dev": "pnpm run build && date +%s > .build-complete && chokidar 'packages/**/*.ts' --ignore 'packages/**/dist/**' -c 'pnpm run build && date +%s > .build-complete'",
-    "build": "turbo run build --filter=./packages/*",
-    "build:website": "turbo run build:website --filter=./website",
-    "build:starter": "turbo run build:starter --filter=./maiar-starter",
+    "build": "nx run-many --target=build --projects=packages/* --verbose",
+    "build:client": "nx run-many --target=build --projects=maiar-client --verbose",
+    "build:starter": "nx run-many --target=build --projects=maiar-starter --verbose",
+    "build:website": "nx run-many --target=build --projects=website --verbose",
     "commit": "cz",
     "commitlint": "commitlint --edit",
-    "lint": "turbo run lint",
+    "lint": "nx run-many --target=lint",
     "eslint": "eslint . --max-warnings 0",
     "prettier": "prettier --write .",
     "whitepaper": "mkdir -p tmp_latex && pdflatex -output-directory=tmp_latex -interaction=nonstopmode -halt-on-error maiar.tex > /dev/null 2>&1 && pdflatex -output-directory=tmp_latex -interaction=nonstopmode -halt-on-error maiar.tex > /dev/null 2>&1 && mv tmp_latex/maiar.pdf . && rm -rf tmp_latex",
@@ -42,6 +43,10 @@
     "@commitlint/format": "19.5.0",
     "@commitlint/types": "19.5.0",
     "@eslint/js": "9.19.0",
+    "@nx/js": "20.7.2",
+    "@swc-node/register": "~1.9.1",
+    "@swc/core": "~1.5.7",
+    "@swc/helpers": "~0.5.11",
     "@trivago/prettier-plugin-sort-imports": "5.2.2",
     "@types/node": "22.13.1",
     "chokidar-cli": "3.0.0",
@@ -51,6 +56,7 @@
     "eslint-config-prettier": "10.0.1",
     "husky": "9.1.7",
     "lerna": "8.1.9",
+    "nx": "20.7.2",
     "prettier": "3.4.2",
     "tsup": "8.3.6",
     "turbo": "2.3.3",
@@ -67,5 +73,6 @@
     "website",
     "maiar-starter"
   ],
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "dependencies": {}
 }

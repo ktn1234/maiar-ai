@@ -45,3 +45,7 @@ logs
 
 # PID
 .pid
+
+
+.nx/cache
+.nx/workspace-data
