@@ -476,6 +476,15 @@ export class Runtime {
       process.exit(0);
     });
 
+    process.on("SIGTERM", async () => {
+      console.log();
+      runtime.logger.info("runtime received SIGTERM signal", {
+        type: "runtime.sigterm"
+      });
+      await runtime.stop();
+      process.exit(0);
+    });
+
     return runtime;
   }
 
