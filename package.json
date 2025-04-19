@@ -43,6 +43,7 @@
     "@commitlint/format": "19.5.0",
     "@commitlint/types": "19.5.0",
     "@eslint/js": "9.19.0",
+    "@nx/eslint": "20.8.0",
     "@trivago/prettier-plugin-sort-imports": "5.2.2",
     "@types/node": "22.13.1",
     "chokidar-cli": "3.0.0",
@@ -51,11 +52,11 @@
     "cz-conventional-changelog": "3.3.0",
     "eslint-config-prettier": "10.0.1",
     "husky": "9.1.7",
+    "nx": "20.8.0",
     "prettier": "3.4.2",
     "tsup": "8.3.6",
     "typescript": "5.7.3",
-    "typescript-eslint": "8.22.0",
-    "nx": "20.8.0"
+    "typescript-eslint": "8.22.0"
   },
   "config": {
     "commitizen": {
