@@ -193,8 +193,8 @@ const config: Config = {
     [
       "docusaurus-plugin-typedoc",
       {
-        entryPoints: ["../packages/core/src/index.ts"],
-        tsconfig: "../packages/core/tsconfig.json",
+        entryPoints: ["../../packages/core/src/index.ts"],
+        tsconfig: "../../packages/core/tsconfig.json",
         out: "api",
         plugin: ["typedoc-plugin-markdown"],
         hideGenerator: true,
