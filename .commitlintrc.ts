@@ -45,6 +45,7 @@ const commitlintConfig: UserConfig = {
         "bounty", // Bounty CI related changes
         "thank-you", // Thank you CI related changes
         "other", // Other changes
+        "packages", // packages directory
         "core", // core package
         "memory-filesystem", // memory-filesystem memory provider
         "memory-postgres", // memory-postgres memory provider
@@ -61,8 +62,10 @@ const commitlintConfig: UserConfig = {
         "plugin-time", // plugin-time plugin
         "plugin-websocket", // plugin-websocket plugin,
         "plugin-x", // plugin-x plugin
-        "maiar-starter", // maiar-starter directory
-        "website" // documentation website
+        "apps", // apps directory
+        "client", // maiar client app
+        "starter", // maiar starter app
+        "website" // maiar docs website app
       ]
     ],
     "header-max-length": [0],
