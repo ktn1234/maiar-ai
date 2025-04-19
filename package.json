@@ -30,6 +30,7 @@
     "build:website": "nx build apps/website --verbose",
     "build:all": "nx run-many --target build --projects packages/*,apps/* --verbose",
     "typecheck": "nx run-many --target typecheck --projects packages/* --verbose",
+    "lint": "nx run-many --target eslint:lint --projects packages/*,apps/* --verbose",
     "eslint": "eslint . --max-warnings 0",
     "commit": "cz",
     "commitlint": "commitlint --edit",

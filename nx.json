@@ -13,5 +13,13 @@
       "cache": true
     }
   },
-  "parallel": 20
+  "parallel": 20,
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "eslint:lint"
+      }
+    }
+  ]
 }
