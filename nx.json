@@ -6,6 +6,9 @@
       "outputs": ["{projectRoot}/dist/**", "{projectRoot}/build/**"],
       "cache": true
     },
+    "typecheck": {
+      "cache": true
+    },
     "lint": {
       "cache": true
     }

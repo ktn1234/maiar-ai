@@ -48,8 +48,7 @@
   },
   "scripts": {
     "dev": "tsup --config ./tsup.config.ts --watch",
-    "lint": "tsc --project tsconfig.json",
-    "lint:emit": "tsc --project tsconfig.json --noEmit false",
+    "typecheck": "tsc --project tsconfig.json --noEmit false",
     "build": "tsup --config ./tsup.config.ts",
     "clean": "rm -rf dist",
     "echo": "echo \"nothing\"",
