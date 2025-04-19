@@ -4,81 +4,86 @@ import fs from "fs";
 const pidFile = ".pid";
 
 /**
- * Function to terminate an existing child process based on PID file
+ * Terminate existing child process group using PID from file
  */
-const terminateExistingProcess = () => {
+function terminatePreviousChildProcessGroup() {
   if (fs.existsSync(pidFile)) {
     const pid = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
     if (!isNaN(pid)) {
       try {
-        process.kill(pid, "SIGTERM");
-        console.log(`Terminated previous process with PID: ${pid}`);
-      } catch (e) {
+        // Terminate previous child process group
+        process.kill(-pid, "SIGTERM");
         console.log(
-          `No previous process found or unable to terminate PID ${pid}: ${e.message}`
+          `[RESTART] Terminated previous process group with PID: ${pid}`
+        );
+      } catch (err) {
+        console.log(
+          `[RESTART] No process group found or unable to terminate PID ${pid}: ${err.message}`
         );
       }
     }
   }
-};
+}
 
 /**
- * Function to start the new child process
- * @returns {ChildProcess} - The spawned child process
+ * Start new detached child process and store its PID
  */
-const startChildProcess = () => {
+function spawnChildProcess() {
+  // Spawn detached child process in its own process group with stdio inheritance
   const child = spawn("node", ["dist/index.js"], {
-    stdio: "inherit"
+    stdio: "inherit",
+    detached: true
   });
 
   child.on("spawn", () => {
-    console.log(`Started new process with PID: ${child.pid}`);
+    console.log(`[RESTART] Started new child process with PID: ${child.pid}`);
+    // Store the PID of the detached child process in a file
     fs.writeFileSync(pidFile, String(child.pid));
   });
 
   child.on("error", (err) => {
-    console.error("Failed to start child process:", err);
+    console.error("[RESTART] Failed to start child process");
+    console.error(err);
   });
 
   child.on("exit", (code, signal) => {
-    console.log(`Child process exited with code ${code} and signal ${signal}`);
+    console.log(
+      `[RESTART] Child process exited with code ${code} and signal ${signal}`
+    );
   });
 
   return child;
-};
+}
 
-// Main execution flow
-const main = async () => {
-  // Terminate any existing process from PID file
-  terminateExistingProcess();
+(async () => {
+  try {
+    terminatePreviousChildProcessGroup();
+    const childProcess = spawnChildProcess();
 
-  // Start the new child process
-  const childProcess = startChildProcess();
-
-  // Handle termination signals
-  const handleExit = () => {
-    if (childProcess && childProcess.pid) {
-      console.log(`Terminating child process with PID: ${childProcess.pid}`);
-      try {
-        process.kill(childProcess.pid, "SIGTERM");
-        console.log("Child process terminated successfully.");
-      } catch (err) {
-        console.error("Error terminating child process:", err.message);
+    const handleExit = () => {
+      if (childProcess && childProcess.pid) {
+        console.log(
+          `\n[RESTART] Terminating current child process group with PID: ${childProcess.pid}`
+        );
+        try {
+          // Terminate the current child process group that was spawned by the parent process
+          process.kill(-childProcess.pid, "SIGTERM");
+        } catch (err) {
+          console.error(
+            "[RESTART] Error terminating current child process group"
+          );
+          console.error(err.message);
+        }
       }
-    }
-    process.exit();
-  };
+      process.exit();
+    };
 
-  // Handle termination signals
-  process.on("SIGTERM", handleExit);
-  process.on("SIGINT", handleExit);
-  process.on("SIGHUP", handleExit);
-  process.on("SIGQUIT", handleExit);
-  process.on("SIGBREAK", handleExit);
-};
-
-// Execute the main function
-main().catch((err) => {
-  console.error("Error in restart script:", err);
-  process.exit(1);
-});
+    // Handles common termination signals (Ctrl+C, Ctrl+Z) to terminate the current child process group that was spawned by the parent process
+    process.on("SIGINT", handleExit);
+    process.on("SIGTSTP", handleExit);
+  } catch (err) {
+    console.error("[RESTART] Error in restart script");
+    console.error(err);
+    process.exit(1);
+  }
+})();
