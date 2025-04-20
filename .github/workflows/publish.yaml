@@ -1,0 +1,52 @@
+---
+name: 🚀 Publish NPM Package
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  CI: ${{ vars.CI }}
+  HUSKY: ${{ vars.HUSKY }}
+
+jobs:
+  publish-npm-package:
+    name: 🚀 Publish NPM Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for provenance generation
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          package_json_file: package.json
+          run_install: false
+
+      - name: 🌎 Setup Node.js
+        uses: actions/setup-node@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        with:
+          node-version-file: package.json
+          registry-url: https://registry.npmjs.org
+          scope: "@maiar-ai"
+          cache: pnpm
+
+      - name: 📦 Install Dependencies
+        run: pnpm install --frozen-lockfile --strict-peer-dependencies
+
+      - name: 🚀 Publish NPM Package
+        run: |
+          # pnpm publish output errors are not always JSON - Patches Nx v20.8.0 release error handler to log the error - Remove if fixed in Nx on an upgrade
+          sed -i '291s/.*/console.log(err); const stdoutData = JSON.parse(err.stdout?.toString() || "{}");/' node_modules/@nx/js/src/executors/release-publish/release-publish.impl.js
+          pnpm nx:publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
