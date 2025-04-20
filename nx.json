@@ -20,6 +20,36 @@
       "options": {
         "targetName": "eslint:lint"
       }
+    },
+    {
+      "plugin": "@nx/js/typescript"
     }
-  ]
+  ],
+  "release": {
+    "projects": ["packages/*"],
+    "version": {
+      "conventionalCommits": true,
+      "generatorOptions": {
+        "preserveLocalDependencyProtocols": true
+      }
+    },
+    "changelog": {
+      "workspaceChangelog": {
+        "createRelease": "github",
+        "file": "CHANGELOG.md",
+        "renderOptions": {
+          "authors": true,
+          "mapAuthorsToGitHubUsernames": true,
+          "commitReferences": true,
+          "versionTitleDate": true
+        }
+      }
+    },
+    "git": {
+      "commit": true,
+      "commitMessage": "chore(release): 🔖 create new tag/release v{version}",
+      "tag": true,
+      "push": true
+    }
+  }
 }
