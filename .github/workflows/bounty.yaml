@@ -24,7 +24,7 @@ jobs:
           pnpm install -w --save-exact @actions/github@6.0.0
 
       # Step Outputs:
-      # - issues (string) - "1, 2, 3" (csv) or ""
+      # - issues_closed (string) - "1, 2, 3" (csv) or ""
       - name: 🔍 Get issue numbers that the PR closes from CODEOWNERS comments
         id: extract-issues
         run: node .github/scripts/bounty/extract-issues.js
