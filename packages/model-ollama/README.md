@@ -1,5 +1,7 @@
 # @maiar-ai/model-ollama
 
+<!-- breaking change -->
+
 This package is part of the [Maiar](https://maiar.dev) ecosystem, designed to work seamlessly with `@maiar-ai/core`.
 
 ## Documentation
