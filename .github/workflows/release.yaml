@@ -1,85 +1,16 @@
 ---
-name: 🚀 Package Release
+name: 🏷️ Github Release
 on:
-  push:
-    branches:
-      - "main"
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+  workflow_dispatch:
 
 env:
   CI: ${{ vars.CI }}
   HUSKY: ${{ vars.HUSKY }}
 
 jobs:
-  package-release-prep:
-    name: 🧱 Package Release Prep
+  github-release:
+    name: 🏷️ Github Release
     runs-on: ubuntu-latest
-    outputs:
-      source-code: ${{ steps.filter.outputs.source-code }}
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-
-      - name: 🎯 Filter Paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: .github/filters.yaml
-
-  # This commit analyzer step is needed because "lerna version --conventional-commits" will not follow conventional commits bump rules and as long as it sees a package source code change it will at least bump a patch version release - https://github.com/lerna/lerna/issues/2379
-  commit-analyzer:
-    name: 📝 Commit Analyzer
-    needs: package-release-prep
-    runs-on: ubuntu-latest
-    outputs:
-      releasable: ${{ steps.analyze.outputs.releasable }}
-    if: ${{ needs.package-release-prep.outputs.source-code == 'true' }}
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 📝 Analyze Commits
-        id: analyze
-        run: |
-          # Get the last tag
-          LAST_TAG=$(git describe --tags --abbrev=0)
-
-          # Fetch all commits since the last tag
-          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s%n%b")
-
-          # Set the default value of releasable to false
-          releasable="false"
-
-          while IFS= read -r COMMIT; do
-            echo "$COMMIT"
-            if echo "$COMMIT" | grep -q "BREAKING CHANGE"; then
-              echo "BREAKING CHANGE detected - major version bump"
-              releasable="true"
-              break
-            elif echo "$COMMIT" | grep -q "feat"; then
-              echo "feat detected - minor version bump"
-              releasable="true"
-              break
-            elif echo "$COMMIT" | grep -q "fix"; then
-              echo "fix detected - patch version bump"
-              releasable="true"
-              break
-            fi
-          done <<< "$COMMITS"
-
-          echo "Releasable: $releasable"
-          echo "releasable=$releasable" >> "$GITHUB_OUTPUT"
-
-  package-release:
-    name: 🚀 Package Release
-    needs:
-      - package-release-prep
-      - commit-analyzer
-    runs-on: ubuntu-latest
-    if: ${{ needs.package-release-prep.outputs.source-code == 'true' && needs.commit-analyzer.outputs.releasable == 'true' }}
     steps:
       - name: 🔑 Create GitHub App Token
         uses: actions/create-github-app-token@v1
@@ -99,6 +30,13 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          package_json_file: package.json
+          run_install: false
+
       - name: 🌎 Setup Node.js
         uses: actions/setup-node@v4
         env:
@@ -107,96 +45,12 @@ jobs:
           node-version-file: package.json
           registry-url: https://registry.npmjs.org
           scope: "@maiar-ai"
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          package_json_file: package.json
-          run_install: false
+          cache: pnpm
 
       - name: 📦 Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --strict-peer-dependencies
 
-      - name: 🧱 Build Packages
-        run: pnpm build
-
-      - name: 🔖 (Tag + Release) Packages to Github Repo
+      - name: 🔖 Github Release (Tag + Release)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm lerna version --yes --no-private --conventional-commits --force-publish --create-release github --loglevel silly
-
-      - name: 🚀 Publish Packages to NPM
-        run: |
-          # Publish packages to NPM
-
-          # Get the latest release tag
-          git fetch --tags
-          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1)
-          echo "Latest tag from Github: $LATEST_TAG"
-
-          echo "Publishing packages to NPM..."
-          echo "NPM Package version $LATEST_TAG"
-          pnpm lerna publish from-git --yes --no-private --dist-tag latest --loglevel verbose
-
-  generate-docs:
-    name: 📚 Generate API Docs
-    needs:
-      - package-release-prep
-      - commit-analyzer
-      - package-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: "write"
-      packages: "write"
-      actions: "read"
-    if: ${{ needs.package-release-prep.outputs.source-code == 'true' && needs.commit-analyzer.outputs.releasable == 'true' }}
-    steps:
-      - name: 🔑 Create GitHub App Token
-        uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: 🌎 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: package.json
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          package_json_file: package.json
-          run_install: false
-
-      - name: 📦 Install Dependencies
-        run: pnpm install
-
-      - name: 📚 Generate Docs
-        run: pnpm build:website
-
-      - name: 🔧 Configure Git
-        run: |
-          git config --global user.name "maiar-intern"
-          git config --global user.email "maiar-intern@users.noreply.github.com"
-
-      - name: 🔎📦 Commit Changes on API Doc Changes
-        run: |
-          if git diff --quiet website/api; then
-            echo "No API documentation changes detected. Skipping commit..."
-            exit 0
-          fi
-
-          echo "API documentation has changed from relevant code changes in packages/**/src/*.ts files"
-          echo "Committing API documentation changes..."
-
-          git pull
-          git add website/api
-          git commit -m "docs(website): update API documentation between commits ${{ github.event.before }}..${{ github.sha }}"
-          git push
+        run: pnpm nx:release
