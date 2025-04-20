@@ -1,7 +1,6 @@
 ---
 name: setup
 description: Setup Node.js and pnpm
-
 runs:
   using: composite
   steps:
@@ -14,8 +13,12 @@ runs:
 
     - name: 🌎 Setup Node.js
       uses: actions/setup-node@v4
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       with:
         node-version-file: package.json
+        registry-url: https://registry.npmjs.org
+        scope: "@maiar-ai"
         cache: pnpm
 
     - name: 📦 Install Dependencies
