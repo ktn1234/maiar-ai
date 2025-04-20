@@ -23,6 +23,7 @@
   "type": "module",
   "scripts": {
     "prepare": "husky",
+    "prepublishOnly": "pnpm build",
     "dev": "pnpm run build && date +%s > .build-complete && chokidar 'packages/**/*.ts' --ignore 'packages/**/dist/**' -c 'pnpm run build && date +%s > .build-complete'",
     "build": "nx run-many --target build --projects packages/* --verbose",
     "build:client": "nx build apps/client --verbose",
@@ -36,7 +37,10 @@
     "commitlint": "commitlint --edit",
     "prettier": "prettier --write .",
     "whitepaper": "mkdir -p tmp_latex && pdflatex -output-directory=tmp_latex -interaction=nonstopmode -halt-on-error maiar.tex > /dev/null 2>&1 && pdflatex -output-directory=tmp_latex -interaction=nonstopmode -halt-on-error maiar.tex > /dev/null 2>&1 && mv tmp_latex/maiar.pdf . && rm -rf tmp_latex",
-    "prepublishOnly": "pnpm build"
+    "nx:reset": "nx reset",
+    "nx:graph": "nx graph",
+    "nx:release": "nx release --verbose",
+    "nx:publish": "nx release publish --verbose"
   },
   "devDependencies": {
     "@commitlint/cli": "19.6.1",
