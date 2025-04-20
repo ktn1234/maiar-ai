@@ -2,7 +2,6 @@ import type { UserConfig } from "@commitlint/types";
 
 const commitlintConfig: UserConfig = {
   extends: ["@commitlint/config-conventional"],
-  parserPreset: "conventional-changelog-atom",
   formatter: "@commitlint/format",
   helpUrl:
     "https://github.com/conventional-changelog/commitlint/#what-is-commitlint",
