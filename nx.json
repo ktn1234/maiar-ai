@@ -20,6 +20,74 @@
       "options": {
         "targetName": "eslint:lint"
       }
+    },
+    {
+      "plugin": "@nx/js/typescript"
     }
-  ]
+  ],
+  "release": {
+    "projects": ["packages/*"],
+    "conventionalCommits": {
+      "types": {
+        "docs": {
+          "semverBump": "none"
+        },
+        "style": {
+          "semverBump": "none"
+        },
+        "refactor": {
+          "semverBump": "none"
+        },
+        "perf": {
+          "semverBump": "none"
+        },
+        "test": {
+          "semverBump": "none"
+        },
+        "build": {
+          "semverBump": "none"
+        },
+        "ci": {
+          "semverBump": "none"
+        },
+        "cd": {
+          "semverBump": "none",
+          "changelog": {
+            "title": "🚚 CD",
+            "hidden": false
+          }
+        },
+        "chore": {
+          "semverBump": "none"
+        },
+        "revert": {
+          "semverBump": "none"
+        }
+      }
+    },
+    "version": {
+      "conventionalCommits": true,
+      "generatorOptions": {
+        "preserveLocalDependencyProtocols": true
+      }
+    },
+    "changelog": {
+      "workspaceChangelog": {
+        "createRelease": "github",
+        "file": "CHANGELOG.md",
+        "renderOptions": {
+          "authors": true,
+          "mapAuthorsToGitHubUsernames": true,
+          "commitReferences": true,
+          "versionTitleDate": true
+        }
+      }
+    },
+    "git": {
+      "commit": true,
+      "commitMessage": "chore(release): 🔖 create new tag/release v{version}",
+      "tag": true,
+      "push": true
+    }
+  }
 }
