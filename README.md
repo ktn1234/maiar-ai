@@ -1,5 +1,7 @@
 ![Maiar banner](./website/static/img/maiar-banner.png)
 
+<!-- chicken eggzz -->
+
 # MAIAR: A Composable, Plugin-Based AI Agent Framework
 
 MAIAR is designed around the **thesis** that AI agents, in their current iteration, primarily consist of three major steps:
