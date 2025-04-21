@@ -69,13 +69,13 @@
           "commitReferences": true,
           "versionTitleDate": true
         }
+      },
+      "git": {
+        "commit": true,
+        "commitMessage": "chore(release): 🔖 create new tag/release v{version}",
+        "tag": true,
+        "push": true
       }
-    },
-    "git": {
-      "commit": true,
-      "commitMessage": "chore(release): 🔖 create new tag/release v{version}",
-      "tag": true,
-      "push": true
     }
   },
   "nxCloudId": "680680b4fd4eb5799867a98a"
