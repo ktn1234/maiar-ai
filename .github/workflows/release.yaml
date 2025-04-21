@@ -3,6 +3,15 @@ name: 🏷️ Github Release
 run-name: 🏷️ Github Release - Tag & Publish Latest Release from ${{ github.ref_name }} by @${{ github.actor }}
 on:
   workflow_dispatch:
+    inputs:
+      specifier:
+        description: "Version specifier (e.g., patch, minor, major)"
+        required: true
+        type: choice
+        options:
+          - "patch"
+          - "minor"
+          - "major"
 
 env:
   CI: ${{ vars.CI }}
@@ -37,4 +46,8 @@ jobs:
       - name: 🔖 Github Release (Tag + Release)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm nx:release
+        run: |
+          pnpm nx:release version ${{ github.event.inputs.specifier }}
+          VERSION=$(jq -r '.version' packages/core/package.json)
+          LATEST_STABLE=$(git tag --list | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          pnpm nx:release changelog $VERSION --from $LATEST_STABLE
