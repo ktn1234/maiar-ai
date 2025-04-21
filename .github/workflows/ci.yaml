@@ -1,5 +1,6 @@
 ---
 name: ♻️ CI Workflow
+run-name: "♻️ CI Workflow - PR #${{ github.event.pull_request.number }} commit ${{ github.sha }} by @${{ github.actor }}"
 on:
   pull_request:
     branches:

@@ -1,4 +1,5 @@
 name: 💰 Bounty Payment
+run-name: "💰 Bounty Payment - PR #${{ github.event.pull_request.number }} commit ${{ github.sha }} by @${{ github.actor }}"
 on:
   pull_request_target:
     types: [closed]

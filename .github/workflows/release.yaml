@@ -1,5 +1,6 @@
 ---
 name: 🏷️ Github Release
+run-name: 🏷️ Github Release - Tag & Publish Latest Release from ${{ github.ref_name }} by @${{ github.actor }}
 on:
   workflow_dispatch:
 

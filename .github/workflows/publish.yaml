@@ -1,5 +1,6 @@
 ---
 name: 🚀 Publish NPM Package
+run-name: 🚀 Publish NPM Package - Using Latest Git Tag from ${{ github.ref_name }} by @${{ github.actor }}
 on:
   workflow_dispatch:
 
