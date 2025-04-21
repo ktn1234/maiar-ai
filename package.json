@@ -40,7 +40,7 @@
     "nx:login": "nx login",
     "nx:reset": "nx reset",
     "nx:graph": "nx graph",
-    "nx:release": "nx release --skip-publish --verbose",
+    "nx:release": "nx release --verbose",
     "nx:publish": "nx release publish --verbose"
   },
   "devDependencies": {
