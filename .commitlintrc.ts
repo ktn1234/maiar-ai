@@ -64,7 +64,8 @@ const commitlintConfig: UserConfig = {
         "apps", // apps directory
         "client", // maiar client app
         "starter", // maiar starter app
-        "website" // maiar docs website app
+        "website", // maiar docs website app
+        "nx-cloud" // nx-cloud
       ]
     ],
     "header-max-length": [0],
