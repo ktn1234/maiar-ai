@@ -3,73 +3,61 @@
   "targetDefaults": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "{projectRoot}/src/**",
+        "{workspaceRoot}/tsup.config.base.ts",
+        "{projectRoot}/package.json",
+        "{projectRoot}/tsup.config.ts",
+        "{projectRoot}/index.html",
+        "{projectRoot}/tsconfig.*.json",
+        "{projectRoot}/vite.config.ts",
+        "{projectRoot}/character.xml",
+        "{projectRoot}/docs/**",
+        "{projectRoot}/static/**",
+        "{projectRoot}/*.ts"
+      ],
       "outputs": ["{projectRoot}/dist/**", "{projectRoot}/build/**"],
       "cache": true
     },
     "typecheck": {
+      "inputs": [
+        "{workspaceRoot}/tsconfig.base.json",
+        "{projectRoot}/tsconfig.json"
+      ],
       "cache": true
     },
-    "lint": {
-      "cache": true
-    }
+    "lint": { "inputs": ["{workspaceRoot}/eslint.config.js"], "cache": true }
   },
   "parallel": 20,
   "plugins": [
     {
       "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "eslint:lint"
-      }
+      "options": { "targetName": "eslint:lint" }
     },
-    {
-      "plugin": "@nx/js/typescript"
-    }
+    { "plugin": "@nx/js/typescript" }
   ],
   "release": {
     "projects": ["packages/*"],
     "conventionalCommits": {
       "types": {
-        "docs": {
-          "semverBump": "none"
-        },
-        "style": {
-          "semverBump": "none"
-        },
-        "refactor": {
-          "semverBump": "none"
-        },
-        "perf": {
-          "semverBump": "none"
-        },
-        "test": {
-          "semverBump": "none"
-        },
-        "build": {
-          "semverBump": "none"
-        },
-        "ci": {
-          "semverBump": "none"
-        },
+        "docs": { "semverBump": "none" },
+        "style": { "semverBump": "none" },
+        "refactor": { "semverBump": "none" },
+        "perf": { "semverBump": "none" },
+        "test": { "semverBump": "none" },
+        "build": { "semverBump": "none" },
+        "ci": { "semverBump": "none" },
         "cd": {
           "semverBump": "none",
-          "changelog": {
-            "title": "🚚 CD",
-            "hidden": false
-          }
+          "changelog": { "title": "🚚 CD", "hidden": false }
         },
-        "chore": {
-          "semverBump": "none"
-        },
-        "revert": {
-          "semverBump": "none"
-        }
+        "chore": { "semverBump": "none" },
+        "revert": { "semverBump": "none" }
       }
     },
     "version": {
       "conventionalCommits": true,
-      "generatorOptions": {
-        "preserveLocalDependencyProtocols": true
-      }
+      "generatorOptions": { "preserveLocalDependencyProtocols": true }
     },
     "changelog": {
       "workspaceChangelog": {
