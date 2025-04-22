@@ -1,4 +1,4 @@
-![Maiar banner](./website/static/img/maiar-banner.png)
+![Maiar banner](./apps/website/static/img/maiar-banner.png)
 
 # MAIAR: A Composable, Plugin-Based AI Agent Framework
 
