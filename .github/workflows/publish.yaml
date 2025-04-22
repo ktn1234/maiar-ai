@@ -4,6 +4,10 @@ run-name: 🚀 Publish NPM Package - Using Latest Git Tag from ${{ github.ref_na
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: ${{ vars.CI }}
   HUSKY: ${{ vars.HUSKY }}
