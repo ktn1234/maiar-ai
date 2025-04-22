@@ -1,3 +1,33 @@
+## 0.22.1-alpha.0 (2025-04-22)
+
+### 📖 Documentation
+
+- **setup:** 🔧 reference correct relative path to maiar banner ([4b9bbc1](https://github.com/ktn1234/maiar-ai/commit/4b9bbc1))
+
+### 🏡 Chore
+
+- **ci:** 💩 remove this registry-url update after testing ([9c6c987](https://github.com/ktn1234/maiar-ai/commit/9c6c987))
+- **config:** 🔧 define explicit inputs for build, typecheck, and lint targets to improve task caching ([#111](https://github.com/ktn1234/maiar-ai/pull/111))
+- **config:** 🔧 rm --skip-publish flag from nx:release npm script ([acfa8aa](https://github.com/ktn1234/maiar-ai/commit/acfa8aa))
+- **config:** 🔧 move Nx config release.git into release.changelog.git ([b86c7e1](https://github.com/ktn1234/maiar-ai/commit/b86c7e1))
+
+### 🤖 CI
+
+- **cd:** standup nx for github tags/releases and npm package publishing ([#110](https://github.com/ktn1234/maiar-ai/pull/110))
+- **nx:** ☁️ set up nx cloud workspace ([#113](https://github.com/ktn1234/maiar-ai/pull/113))
+
+### 🚚 CD
+
+- **cd:** 🔧 use Nx release subcommands for github tagging/releases in release workflow ([d6b06c7](https://github.com/ktn1234/maiar-ai/commit/d6b06c7))
+- **cd:** 👷 add pre-release workflow ([4e8d622](https://github.com/ktn1234/maiar-ai/commit/4e8d622))
+- **cd:** 👷 cancel in-progress workflows on same branch for pre-release/release/publish workflows ([e4fead8](https://github.com/ktn1234/maiar-ai/commit/e4fead8))
+- **cd:** 👷 infer npm tag from git tag or workflow input during publish ([dfcab05](https://github.com/ktn1234/maiar-ai/commit/dfcab05))
+
+### ❤️ Thank You
+
+- ktn1234 @ktn1234
+- pbit @0xPBIT
+
 # Change Log
 
 All notable changes to this project will be documented in this file.

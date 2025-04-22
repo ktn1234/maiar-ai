@@ -1,6 +1,6 @@
 {
   "name": "@maiar-ai/memory-postgres",
-  "version": "0.22.0",
+  "version": "0.22.1-alpha.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
