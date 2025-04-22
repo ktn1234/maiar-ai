@@ -13,6 +13,10 @@ on:
           - "minor"
           - "major"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: ${{ vars.CI }}
   HUSKY: ${{ vars.HUSKY }}
