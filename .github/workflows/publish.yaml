@@ -3,6 +3,21 @@ name: 🚀 Publish NPM Package
 run-name: 🚀 Publish NPM Package - Using Latest Git Tag from ${{ github.ref_name }} by @${{ github.actor }}
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "The distribution tag to apply to the published package (e.g., latest, next)"
+        required: true
+        type: choice
+        options:
+          - latest
+          - next
+
+  push:
+    tags:
+      - "v*.*.*" # stable
+      - "v*.*.*-alpha.*" # alpha prerelease
+      - "v*.*.*-beta.*" # beta prerelease
+      - "v*.*.*-rc.*" # rc prerelease
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,7 +48,21 @@ jobs:
       - name: 🚀 Publish NPM Package
         run: |
           # pnpm publish output errors are not always JSON - Patches Nx v20.8.0 release error handler to log the error - Remove if fixed in Nx on an upgrade
+          # Patch for Nx error output
           sed -i '291s/.*/console.log(err); const stdoutData = JSON.parse(err.stdout?.toString() || "{}");/' node_modules/@nx/js/src/executors/release-publish/release-publish.impl.js
-          pnpm nx:publish
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG_NAME="${{ github.ref_name }}"
+            if [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              TAG="latest"
+            else
+              TAG="next"
+            fi
+          fi
+
+          echo "Publishing with tag: $TAG"
+          pnpm nx:publish --tag $TAG
         env:
           NPM_CONFIG_PROVENANCE: true
