@@ -144,9 +144,22 @@ export class MCPPlugin extends Plugin {
       }
     }
 
-    for (const t of this.transports) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (t as any)?.close?.();
+    for (const transport of this.transports) {
+      try {
+        this.logger.info("closing MCP transport...", {
+          type: "plugin-mcp.shutdown"
+        });
+        await transport.close();
+        this.logger.info("closed MCP transport successfully", {
+          type: "plugin-mcp.shutdown"
+        });
+      } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        this.logger.error("failed to close MCP transport", {
+          type: "plugin-mcp.shutdown",
+          error: error.message
+        });
+      }
     }
   }
 
