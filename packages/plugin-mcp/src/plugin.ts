@@ -225,9 +225,9 @@ export class MCPPlugin extends Plugin {
  * Supports: type: object / string / number / boolean / integer / array
  * Nested objects & arrays are handled recursively. Anything unknown → z.any().
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function jsonSchemaToZod(schema: unknown): ZodType<unknown> {
   if (!schema || typeof schema !== "object") return z.any();
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const s: any = schema;
 
   switch (s.type) {
