@@ -34,11 +34,11 @@ export class CodexPlugin extends Plugin {
             );
 
             // Resolve the path to the Codex CLI binary
-            const codexCommand = "codex";
+            const command = "npx";
             const pluginRoot = path.join(__dirname, "..");
 
             // Build arguments for the Codex command
-            const args = [];
+            const args = ["codex"];
             if (commandDetails.approvalMode) {
               args.push("-a", commandDetails.approvalMode);
             }
@@ -61,21 +61,16 @@ export class CodexPlugin extends Plugin {
             // Set environment variables, including OPENAI_API_KEY if provided
             const env = {
               ...process.env,
-              OPENAI_API_KEY: config.apiKey,
-              PATH: `${process.env.PATH}:node_modules/.bin`
+              OPENAI_API_KEY: config.apiKey
             };
 
             // Execute the Codex CLI command
-            const { stdout, stderr, exitCode } = await execa(
-              codexCommand,
-              args,
-              {
-                cwd: pluginRoot,
-                env,
-                timeout: config.timeout || 600000, // 600 seconds timeout to prevent hanging
-                maxBuffer: config.maxBuffer || 1024 * 1024 * 10 // 10MB buffer for output
-              }
-            );
+            const { stdout, stderr, exitCode } = await execa(command, args, {
+              cwd: pluginRoot,
+              env,
+              timeout: config.timeout || 600000, // 600 seconds timeout to prevent hanging
+              maxBuffer: config.maxBuffer || 1024 * 1024 * 10 // 10MB buffer for output
+            });
 
             // Return the result
             return {
