@@ -31,6 +31,7 @@ const commitlintConfig: UserConfig = {
         "setup", // Project setup
         "config", // Configuration files
         "deps", // Dependency updates
+        "deps-dev", // Development dependency updates
         "feature", // Feature-specific changes
         "bug", // Bug fixes
         "docs", // Documentation
