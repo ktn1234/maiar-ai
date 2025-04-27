@@ -19,6 +19,7 @@ Instead of rigid workflows or monolithic agent logic, Maiar abstracts these step
 - [Extensibility & Modularity](#extensibility-modularity)
 - [Design Principles](#design-principles)
 - [Contributors](#contributors)
+- [Star History](#star-history)
 
 ## Getting Started Running MAIAR
 
@@ -305,6 +306,10 @@ By maintaining a **flexible core**, MAIAR ensures that AI agents can adapt to di
 - **Unopinionated & Extensible** – Developers have full control over databases, models, and infrastructure choices.
 
 MAIAR isn't just another AI agent framework—it's a **declarative, extensible, and composable way to build intelligent applications**. Whether you're adding new capabilities or integrating with existing platforms, MAIAR makes it simple.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=UraniumCorporation/maiar-ai&type=Date)](https://www.star-history.com/#UraniumCorporation/maiar-ai&Date)
 
 ## Contributors
 
