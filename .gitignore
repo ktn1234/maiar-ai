@@ -6,6 +6,9 @@ tmp
 # apps/starter data directory
 **/data/
 
+# sandbox directory for CODEX plugin
+**/sandbox/
+
 # Project
 .build-complete
 

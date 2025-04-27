@@ -1,3 +1,5 @@
+// DEV NOTE: GET RID OF THIS ENTIRE FILE OR MOVE THE CONTENTS TO SOMEWHERE ELSE
+
 // Base context item that all items must include
 export interface BaseContextItem {
   id: string; // Unique identifier for this context item
@@ -31,17 +33,10 @@ export interface HistoryContextItem extends BaseContextItem {
   }>;
 }
 
-// Queue interface for managing agent contexts
-export interface EventQueue {
-  push: (context: Omit<AgentContext, "eventQueue">) => Promise<void>;
-  shift: () => Promise<AgentContext | undefined>;
-}
-
 // The full context chain container
-export interface AgentContext {
+export interface AgentTask {
   contextChain: BaseContextItem[];
   conversationId?: string;
-  eventQueue?: EventQueue;
   platformContext?: {
     platform: string;
     responseHandler?: (response: unknown) => void;
@@ -50,10 +45,8 @@ export interface AgentContext {
 }
 
 // Helper to get the initial user input
-export function getUserInput(
-  context: AgentContext
-): UserInputContext | undefined {
-  const firstItem = context.contextChain[0];
+export function getUserInput(task: AgentTask): UserInputContext | undefined {
+  const firstItem = task.contextChain[0];
   return firstItem?.type === "user_input"
     ? (firstItem as UserInputContext)
     : undefined;

@@ -3,7 +3,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { z, ZodType } from "zod";
 
 import {
-  AgentContext,
+  AgentTask,
   BaseContextItem,
   Plugin,
   PluginResult
@@ -171,7 +171,7 @@ export class MCPPlugin extends Plugin {
     this.executors.push({
       name: executorName,
       description: tool.description ?? "",
-      fn: async (context: AgentContext): Promise<PluginResult> => {
+      fn: async (context: AgentTask): Promise<PluginResult> => {
         const contextChain = context.contextChain as BaseContextItem[];
         const prompt = generateArgumentTemplate({
           executorName,
@@ -194,11 +194,9 @@ export class MCPPlugin extends Plugin {
 
         try {
           // Ask the LLM to produce arguments matching the schema
-          const args = (await this.runtime.operations.getObject(
-            zodSchema,
-            prompt,
-            { temperature: 0.2 }
-          )) as Record<string, unknown>;
+          const args = (await this.runtime.getObject(zodSchema, prompt, {
+            temperature: 0.2
+          })) as Record<string, unknown>;
 
           const result = await client.callTool({
             name: tool.name,
