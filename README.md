@@ -18,6 +18,7 @@ Instead of rigid workflows or monolithic agent logic, Maiar abstracts these step
 - [Pipes & Context Chains](#pipes-context-chains)
 - [Extensibility & Modularity](#extensibility-modularity)
 - [Design Principles](#design-principles)
+- [Contributors](#contributors)
 
 ## Getting Started Running MAIAR
 
@@ -273,3 +274,9 @@ By maintaining a **flexible core**, MAIAR ensures that AI agents can adapt to di
 - **Unopinionated & Extensible** – Developers have full control over databases, models, and infrastructure choices.
 
 MAIAR isn't just another AI agent framework—it's a **declarative, extensible, and composable way to build intelligent applications**. Whether you're adding new capabilities or integrating with existing platforms, MAIAR makes it simple.
+
+## Contributors
+
+<a href="https://github.com/UraniumCorporation/maiar-ai/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=UraniumCorporation/maiar-ai" />
+</a>
