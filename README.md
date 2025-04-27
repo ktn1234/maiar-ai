@@ -41,8 +41,8 @@ nvm use 22.13.1
 1. Create a new directory for your project and initialize it:
 
 ```bash
-mkdir my-maiar-agent
-cd my-maiar-agent
+mkdir maiar-agent
+cd maiar-agent
 ```
 
 ```bash
@@ -52,60 +52,91 @@ pnpm init
 2. Install the core MAIAR packages, providers, and some starter plugins:
 
 ```bash
-pnpm add @maiar-ai/core @maiar-ai/model-openai @maiar-ai/memory-sqlite @maiar-ai/plugin-terminal @maiar-ai/plugin-text dotenv
+pnpm add dotenv @maiar-ai/core @maiar-ai/model-openai @maiar-ai/memory-sqlite @maiar-ai/plugin-text @maiar-ai/plugin-terminal
 ```
 
 3. Create a new directory called `src` in your project root and create a new file called `index.ts` in it:
 
-```typescript
+```ts
 import "dotenv/config";
 
-import path from "path";
+import { join } from "path";
 
-import { createRuntime } from "@maiar-ai/core";
+import { MemoryProvider, ModelProvider, Plugin, Runtime } from "@maiar-ai/core";
+import { stdout } from "@maiar-ai/core/dist/logger";
 
-import { OpenAIProvider } from "@maiar-ai/model-openai";
+import {
+  OpenAIModelProvider,
+  OpenAITextGenerationModel
+} from "@maiar-ai/model-openai";
 
-import { SQLiteProvider } from "@maiar-ai/memory-sqlite";
+import { SQLiteMemoryProvider } from "@maiar-ai/memory-sqlite";
 
-import { PluginTerminal } from "@maiar-ai/plugin-terminal";
-import { PluginTextGeneration } from "@maiar-ai/plugin-text";
+import { TerminalPlugin } from "@maiar-ai/plugin-terminal";
+import { TextGenerationPlugin } from "@maiar-ai/plugin-text";
 
-const runtime = createRuntime({
-  models: [
-    new OpenAIProvider({
-      apiKey: process.env.OPENAI_API_KEY as string,
-      model: "gpt-3.5-turbo"
+// Suppress deprecation warnings
+process.removeAllListeners("warning");
+
+async function main() {
+  const modelProviders: ModelProvider[] = [
+    new OpenAIModelProvider({
+      models: [OpenAITextGenerationModel.GPT_41],
+      apiKey: process.env.OPENAI_API_KEY as string
     })
-  ],
-  memory: new SQLiteProvider({
-    dbPath: path.join(process.cwd(), "data", "conversations.db")
-  }),
-  plugins: [
-    new PluginTextGeneration(),
-    new PluginTerminal({ user: "test", agentName: "maiar-starter" })
-  ],
-  capabilityAliases: []
-});
+  ];
 
-// Start the runtime
-console.log("Starting agent...");
-runtime.start().catch((error) => {
-  console.error("Failed to start agent:", error);
-  process.exit(1);
-});
+  const memoryProvider: MemoryProvider = new SQLiteMemoryProvider({
+    dbPath: join(process.cwd(), "data", "conversations.db")
+  });
 
-// Handle shutdown gracefully
-process.on("SIGINT", async () => {
-  console.log("Shutting down agent...");
-  await runtime.stop();
-  process.exit(0);
-});
+  const plugins: Plugin[] = [
+    new TextGenerationPlugin(),
+    new TerminalPlugin({
+      user: "operator",
+      agentName: "$MAIAR"
+    })
+  ];
+
+  const capabilityAliases: string[][] = [];
+
+  const agent = await Runtime.init({
+    modelProviders,
+    memoryProvider,
+    plugins,
+    capabilityAliases,
+    options: {
+      logger: {
+        level: "debug",
+        transports: [stdout]
+      },
+      server: {
+        port: 3000
+      }
+    }
+  });
+
+  await agent.start();
+}
+
+// Start the runtime if this file is run directly
+if (require.main === module) {
+  (async () => {
+    try {
+      console.log("Starting agent...");
+      await main();
+    } catch (error) {
+      console.error("Failed to start agent");
+      console.error(error);
+      process.exit(1);
+    }
+  })();
+}
 ```
 
 4. Create a `.env` file in your project root. For our example, we'll use the OpenAI API key:
 
-> [!INFO]
+> [!NOTE]
 > Since we're using OpenAI's API for this quickstart, you'll need to:
 >
 > 1. Create an OpenAI account at [platform.openai.com](https://platform.openai.com)
@@ -203,7 +234,7 @@ This command watches for changes in the core packages (`packages/**/*.ts`) and a
 
 ```bash
 # From the root of the repository
-cd maiar-starter # or your own development project
+cd apps/starter # or your own development project
 pnpm dev
 ```
 
@@ -217,7 +248,7 @@ This setup ensures that changes to either the core packages or the starter proje
 
 > [!NOTE]
 >
-> The `maiar-starter` project serves as a reference implementation demonstrating how to develop against the core MAIAR packages. You can apply this same development setup to any project that depends on MAIAR packages - simply mirror the dev script configuration and `.build-complete` marker file handling shown in the starter project's package.json. The key focus of this repository is the core packages in `packages/*`, with `maiar-starter` serving as an example consumer.
+> The `starter` project serves as a reference implementation demonstrating how to develop against the core MAIAR packages. You can apply this same development setup to any project that depends on MAIAR packages - simply mirror the dev script configuration and `.build-complete` marker file handling shown in the starter project's package.json. The key focus of this repository is the core packages in `packages/*`, with `starter` serving as an example consumer.
 
 ## **How It Works**
 
