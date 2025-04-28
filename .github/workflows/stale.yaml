@@ -1,0 +1,30 @@
+name: ⏳ Stale Issues & PRs
+run-name: ⏳ Stale Issues & PRs - Mark and close stale issues and PRs
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs every day at midnight UTC
+
+env:
+  DAYS_BEFORE_STALE: 30
+  DAYS_BEFORE_CLOSE: 7
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: "This issue is stale because it has been open for ${{ env.DAYS_BEFORE_STALE }} days with no activity. Remove the stale label, comment, or it will be closed in ${{ env.DAYS_BEFORE_CLOSE }} days."
+          stale-pr-message: "This PR is stale because it has been open for ${{ env.DAYS_BEFORE_STALE }} days with no activity. Remove the stale label, comment, or it will be closed in ${{ env.DAYS_BEFORE_CLOSE }} days."
+          close-issue-message: "This issue was closed because it has been stale for ${{ env.DAYS_BEFORE_STALE }} days with no activity. If this is a mistake, please comment and we will reopen it."
+          close-pr-message: "This PR was closed because it has been stale for ${{ env.DAYS_BEFORE_STALE }} days with no activity. If this is a mistake, please comment and we will reopen it."
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          days-before-stale: ${{ env.DAYS_BEFORE_STALE }}
+          days-before-close: ${{ env.DAYS_BEFORE_CLOSE }}
