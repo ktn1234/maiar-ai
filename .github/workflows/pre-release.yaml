@@ -21,6 +21,9 @@ env:
   CI: ${{ vars.CI }}
   HUSKY: ${{ vars.HUSKY }}
 
+permissions:
+  contents: write # Needed for the checkout action and to create a release
+
 jobs:
   github-release:
     name: 🏷️ Github Pre-release
