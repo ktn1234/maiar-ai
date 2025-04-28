@@ -48,11 +48,14 @@ const commitlintConfig: UserConfig = {
         "other", // Other changes
         "packages", // packages directory
         "core", // core package
+        "memory", // memory provider
         "memory-filesystem", // memory-filesystem memory provider
         "memory-postgres", // memory-postgres memory provider
         "memory-sqlite", // memory-sqlite memory provider
+        "model", // model provider
         "model-ollama", // model-ollama model provider
         "model-openai", // model-openai model provider
+        "plugin", // plugin provider
         "plugin-character", // plugin-character plugin
         "plugin-codex", // plugin-codex plugin
         "plugin-discord", // plugin-discord plugin
