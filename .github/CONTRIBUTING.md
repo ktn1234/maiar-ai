@@ -5,7 +5,7 @@ First off, thanks for considering contributing! Your help makes this project bet
 ## How to Contribute
 
 1. **Fork the Repo** – Click the Fork button on GitHub.
-2. **Clone Your Fork** – `git clone https://github.com/your-username/project-name.git`
+2. **Clone Your Fork** – `git clone https://github.com/<your-username>/maiar-ai.git`
 3. **Create a Branch** – `git checkout -b feature-or-bugfix-name`
 4. **Make Changes** – Ensure your code follows the project's style guide and guidlines below.
 5. **Commit Your Changes using Conventional Commits** – `git commit -m "type(scope): Brief but descriptive commit message"`
@@ -23,10 +23,11 @@ First off, thanks for considering contributing! Your help makes this project bet
 
 ### Git Commit Messages
 
+- Use lowercase for conventional commits types/scopes
 - Use the present tense ("Add feature" not "Added feature")
 - Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-- Limit the first line to 72 characters or less
-- Reference issues and pull requests liberally after the first line
+- Body explains "what" and "why," not "how" (if needed)
+- Footer for breaking changes, issues, etc
 
 ### JavaScript Styleguide
 
@@ -42,12 +43,12 @@ First off, thanks for considering contributing! Your help makes this project bet
 
 ## Commit History Policy
 
-To maintain a clean and linear commit history, this repository only allows rebasing -- merge commits are not permitted. When contributing:
+To keep the commit history clean and linear, we **squash and merge** all PRs — merge commits are not allowed. When contributing:
 
-- Always rebase your branch onto the latest main (or the relevant base branch) before submitting a PR.
-- PRs will be merged using Rebase and Merge -- Squash Merging and Merge Commits are disabled.
-- If your branch falls behind, rebase interactively rather than merging upstream changes.
-- If you fork this repository, ensure your PRs are rebased properly before submission.
+- Rebase your branch onto the latest `main` (or relevant base branch) before submitting a PR.
+- The PR title must follow the **conventional commit** format and capture the essence of all changes made in the squashed commits.
+- Avoid merging upstream changes into your branch; always rebase interactively if your branch falls behind.
+- If you're working from a fork, ensure your PR is rebased properly before submission.
 
 ## Conventional Commits
 
@@ -67,21 +68,30 @@ The full specification can be found at [https://conventionalcommits.org](https:/
 
 For example: `feat(core): add new feature`
 
+Based on the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification, the following types are available:
+
+- **feat**: a new feature
+- **fix**: a bug fix
+- **docs**: documentation only changes
+- **style**: changes that do not affect meaning (whitespace, formatting, etc)
+- **refactor**: code change that neither fixes a bug nor adds a feature
+- **perf**: a code change that improves performance
+- **test**: adding or correcting tests
+- **build**: changes that affect the build system or dependencies
+- **ci**: changes to ci config files and scripts
+- **chore**: other changes that don't modify src or test files
+- **revert**: revert a previous commit
+
 Common scopes for this project can be for main components and include:
 
-- core
-- memory-filesystem
-- memory-sqlite
-- model-ollama
-- model-openai
-- plugin-image
-- plugin-telegram
-- plugin-terminal
-- plugin-text
-- plugin-time
-- plugin-websocket
-- maiar-starter
-- website
+- **core**: changes in the core package
+- **model**: changes in any model provider package
+- **memory**: changes in the memory provider package
+- **plugin**: changes in any plugin package
+- **client**: changes in the client app
+- **starter**: changes in the starter app
+- **website**: changes in the website
+- **config**: changes for any configuration
 
 This is not an exhaustive list, and additional scopes can be added in [.commitlintrc.ts](https://github.com/UraniumCorporation/maiar-ai/blob/main/.commitlintrc.ts) as needed.
 
@@ -93,13 +103,15 @@ Conventional commits will be enforced using [commitlint](https://commitlint.js.o
 
 - [commitizen](https://commitizen.github.io/cz-cli/) is recommended for creating conventional commits. This is a command-line tool that guides the user through creating a commit message that follows the Conventional Commits format. To use Commitizen, run `pnpm commit` at the root of the project and interactively create a commit message.
 
-### Important Commit Message Rules - Please Read
+### Pull Requests
 
-- `fix`, `feat`, and `BREAKING CHANGE` in the commit body will only be accepted in a commit message if it is editing the core or official plugins' source code (i.e., `packages/*/src/*.ts`) – this will trigger a version bump, potentially generate new API docs based on the change, and publish a new release of the package to the npm registry.
-
-  - If these commit messages are found for editing other files inside the core or official plugins' source code, the PR will be rejected.
-
-- Conventional commits for the website (no matter what it is - `fix`, `feat`, `BREAKING CHANGE`, `chore`, etc.) will not trigger a version bump or publish a new release of the package to the npm registry; therefore, they can be used for updating the website and documentation.
+- The PR title must follow the **conventional commit** specification format and capture the essence of all commits made in the PR.
+- **How to do it**: When creating a PR, ensure the title is prefixed with the appropriate type and scope. For example, `feat(core): add new feature` or `fix(model): fix issue with model provider`, `docs(website): update documentation for website`, etc.
+- **Breaking Changes**: If your PR introduces breaking changes, append an exclamation mark `!` after the type/scope in the title. For example, `feat(core)!: introduce breaking change in core package from a feature`, `fix(model)!: fix issue with model provider that introduces breaking change`, `refactor(model)!: refactor model provider that introduces breaking change`, etc.
+  - Ensure to document the breaking changes in the PR description and provide migration instructions if applicable.
+  - In the commit that introduces the breaking change, include a footer with `BREAKING CHANGE: <description>` to explain the breaking change and its impact.
+    - This will be automatically detected and included in the changelog to be in the release notes for the next version with your breaking change. It will allow us to communicate breaking changes effectively to users.
+- **Why this matters**: Our change management relies on proper use of conventional commits to ensure version bumps, release automation, and consistent changelog generation.
 
 ## Reporting Issues
 
