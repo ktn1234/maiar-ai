@@ -27,9 +27,14 @@
         "{workspaceRoot}/tsconfig.base.json",
         "{projectRoot}/tsconfig.json"
       ],
+      "outputs": [],
       "cache": true
     },
-    "lint": { "inputs": ["{workspaceRoot}/eslint.config.js"], "cache": true }
+    "lint": {
+      "inputs": ["{workspaceRoot}/eslint.config.js"],
+      "outputs": [],
+      "cache": true
+    }
   },
   "parallel": 20,
   "plugins": [
