@@ -32,6 +32,7 @@ const commitlintConfig: UserConfig = {
         "config", // Configuration files
         "dependabot", // Dependabot configuration
         "deps", // Dependency updates
+        "deps-dev", // Development dependency updates
         "feature", // Feature-specific changes
         "bug", // Bug fixes
         "docs", // Documentation
