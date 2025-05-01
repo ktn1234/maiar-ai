@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "docusaurus": "docusaurus",
+    "prestart": "pnpm build",
+    "start": "docusaurus serve",
     "dev": "docusaurus start",
     "build": "docusaurus build",
+    "docusaurus": "docusaurus",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
