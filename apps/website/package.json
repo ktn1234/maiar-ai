@@ -14,7 +14,8 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "gen:pwa": "cd static && pwa-asset-generator img/icon.svg img/icons --background \"#0D190E\" --mstile -t png --manifest manifest.json --maskable --log true"
   },
   "dependencies": {
     "@docusaurus/core": "3.7.0",
