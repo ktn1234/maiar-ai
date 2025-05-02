@@ -1,4 +1,9 @@
 import type { UserConfig } from "@commitlint/types";
+import { readdirSync } from "fs";
+import { join } from "path";
+
+const packages = readdirSync(join(__dirname, "packages"));
+const apps = readdirSync(join(__dirname, "apps"));
 
 const commitlintConfig: UserConfig = {
   extends: ["@commitlint/config-conventional"],
@@ -46,32 +51,13 @@ const commitlintConfig: UserConfig = {
         "bounty", // Bounty CI related changes
         "thank-you", // Thank you CI related changes
         "other", // Other changes
-        "packages", // packages directory
-        "core", // core package
+        "packages", // packages directory,
+        ...packages, // all packages
         "memory", // memory provider
-        "memory-filesystem", // memory-filesystem memory provider
-        "memory-postgres", // memory-postgres memory provider
-        "memory-sqlite", // memory-sqlite memory provider
         "model", // model provider
-        "model-ollama", // model-ollama model provider
-        "model-openai", // model-openai model provider
         "plugin", // plugin provider
-        "plugin-character", // plugin-character plugin
-        "plugin-codex", // plugin-codex plugin
-        "plugin-discord", // plugin-discord plugin
-        "plugin-image", // plugin-image plugin
-        "plugin-mcp", // plugin-mcp plugin
-        "plugin-search", // plugin-search plugin
-        "plugin-telegram", // plugin-telegram plugin
-        "plugin-terminal", // plugin-terminal plugin
-        "plugin-text", // plugin-text plugin
-        "plugin-time", // plugin-time plugin
-        "plugin-websocket", // plugin-websocket plugin,
-        "plugin-x", // plugin-x plugin
         "apps", // apps directory
-        "client", // maiar client app
-        "starter", // maiar starter app
-        "website", // maiar docs website app
+        ...apps, // all apps
         "nx", // nx related changes
         "docker" // docker related changes
       ]
