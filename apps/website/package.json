@@ -3,19 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "docusaurus": "docusaurus",
-    "start": "docusaurus start",
+    "prestart": "pnpm build",
+    "start": "docusaurus serve",
+    "dev": "docusaurus start",
     "build": "docusaurus build",
+    "docusaurus": "docusaurus",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "gen:pwa": "cd static && pwa-asset-generator img/icon.svg img/icons --background \"#0D190E\" --mstile -t png --manifest manifest.json --maskable --log true"
   },
   "dependencies": {
     "@docusaurus/core": "3.7.0",
+    "@docusaurus/plugin-pwa": "3.7.0",
     "@docusaurus/preset-classic": "3.7.0",
     "@mdx-js/react": "3.1.0",
     "clsx": "2.1.1",
@@ -32,6 +36,7 @@
     "@types/react": "19.0.8",
     "@types/react-dom": "19.0.3",
     "docusaurus-plugin-typedoc": "1.2.3",
+    "pwa-asset-generator": "8.0.4",
     "typedoc": "0.27.6",
     "typedoc-plugin-markdown": "4.4.1",
     "typescript": "5.7.3"

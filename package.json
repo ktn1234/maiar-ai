@@ -28,7 +28,7 @@
     "dev": "pnpm run build && date +%s > .build-complete && chokidar 'packages/**/*.ts' --ignore 'packages/**/dist/**' -c 'pnpm run build && date +%s > .build-complete'",
     "dev:client": "cd apps/client && pnpm run dev",
     "dev:starter": "cd apps/starter && pnpm run dev",
-    "dev:website": "cd apps/website && pnpm run start",
+    "dev:website": "cd apps/website && pnpm run dev",
     "build": "nx run-many --target build --projects packages/* --verbose",
     "build:client": "nx build apps/client --verbose",
     "build:starter": "nx build apps/starter --verbose",

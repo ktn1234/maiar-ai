@@ -1,4 +1,3 @@
-
 # Base stage with Node.js and pnpm
 FROM node:22.13.1-slim AS base
 RUN apt-get update && \

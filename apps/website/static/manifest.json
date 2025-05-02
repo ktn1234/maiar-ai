@@ -1,0 +1,44 @@
+{
+  "name": "MAIAR",
+  "short_name": "MAIAR",
+  "theme_color": "#111412",
+  "background_color": "#111412",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "id": "/",
+  "description": "MAIAR is a powerful framework for building AI agents that can interact with various systems and services. Whether you're building a chatbot, an automation tool, or a complex AI system, MAIAR provides the building blocks you need.",
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://maiar.dev/manifest.json"
+    }
+  ],
+  "icons": [
+    {
+      "src": "img/icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "img/icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

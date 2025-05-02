@@ -205,7 +205,7 @@ export default function Home(): JSX.Element {
   return (
     <>
       <Head>
-        <title>maiar</title>
+        <title>MAIAR</title>
         <style>
           {`
             html, body {
