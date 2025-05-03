@@ -3,14 +3,14 @@ import { Logger } from "winston";
 import { MemoryManager, PluginRegistry, Runtime } from "../..";
 import { PluginResult } from "../providers";
 import { Plugin } from "../providers/plugin";
-import { BaseContextItem, getUserInput } from "./agent";
-import { AgentTask } from "./agent";
 import {
   generatePipelineModificationTemplate,
-  generatePipelineTemplate
+  generatePipelineTemplate,
+  generateRelatedMemoriesTemplate
 } from "./templates";
 import {
-  ErrorContextItem,
+  AgentTask,
+  Context,
   Pipeline,
   PipelineGenerationContext,
   PipelineModification,
@@ -44,7 +44,7 @@ export class Processor {
    * @param task - the task to execute, internally contains the context chain which is modified as the pipeline is executed
    * @returns the context chain after the pipeline has been executed
    */
-  public async spawn(task: AgentTask): Promise<BaseContextItem[]> {
+  public async spawn(task: AgentTask): Promise<Context[]> {
     const pipeline = await this.createPipeline(task);
     await this.executePipeline(pipeline, task);
     return task.contextChain;
@@ -59,9 +59,6 @@ export class Processor {
    * @returns
    */
   private async createPipeline(task: AgentTask): Promise<Pipeline> {
-    // Store the context in history if it's user input
-    const userInput = getUserInput(task);
-
     // Get all available executors from plugins
     const availablePlugins = this.pluginRegistry.plugins.map(
       (plugin: Plugin) => ({
@@ -75,60 +72,55 @@ export class Processor {
       })
     );
 
-    // Get platform and message from user input or use defaults
-    const platform = userInput?.pluginId || "unknown";
-    const message = userInput?.rawMessage || "";
+    // Get related memories from the space search
+    const relatedMemories = await this.memoryManager.queryMemory({
+      relatedSpaces: task.space.relatedSpaces,
+      limit: 10
+    });
 
-    // Get conversation history if user input exists
-    let conversationHistory: {
-      role: string;
-      content: string;
-      timestamp: number;
-    }[] = [];
-    if (userInput) {
-      conversationHistory =
-        await this.memoryManager.getRecentConversationHistory(
-          userInput.user,
-          platform
-        );
-    }
+    const relatedMemoriesContext = generateRelatedMemoriesTemplate(
+      JSON.stringify({
+        task: task.trigger,
+        relatedMemories
+      })
+    );
+
+    this.logger.debug("related memories context", {
+      type: "runtime.pipeline.related.memories",
+      relatedMemoriesContext
+    });
 
     // Create the generation context
     const pipelineContext: PipelineGenerationContext = {
-      contextChain: task.contextChain,
+      trigger: task.trigger,
       availablePlugins,
       currentContext: {
-        platform,
-        message,
-        conversationHistory
+        relatedMemoriesContext
       }
     };
 
     try {
       // Generate the pipeline using model
-      const template = generatePipelineTemplate(pipelineContext);
-
-      // Log pipeline generation start
-      this.logger.info("pipeline generation start", {
-        type: "pipeline.generation.start",
-        platform,
-        message,
-        template
-      });
+      const generatePipelineContext = generatePipelineTemplate(pipelineContext);
 
       this.logger.debug("generating pipeline", {
         type: "runtime.pipeline.generating",
-        context: pipelineContext,
-        template,
-        contextChain: task.contextChain
+        pipelineContext,
+        generatePipelineContext
       });
 
-      const pipeline = await this.runtime.getObject(PipelineSchema, template, {
-        temperature: 0.2 // Lower temperature for more predictable outputs
-      });
+      const pipeline = await this.runtime.getObject(
+        PipelineSchema,
+        generatePipelineContext,
+        {
+          temperature: 0.2 // Lower temperature for more predictable outputs
+        }
+      );
 
       // Add concise pipeline steps log
-      const steps = pipeline.map((step) => `${step.pluginId}:${step.action}`);
+      const steps = pipeline.steps.map(
+        (step) => `${step.pluginId}:${step.action}`
+      );
       this.logger.info("pipeline steps", {
         type: "runtime.pipeline.steps",
         steps
@@ -137,9 +129,7 @@ export class Processor {
       // Log successful pipeline generation
       this.logger.info("pipeline generation complete", {
         type: "pipeline.generation.complete",
-        platform,
-        message,
-        template,
+        generatePipelineContext,
         pipeline,
         steps
       });
@@ -154,8 +144,6 @@ export class Processor {
       // Log pipeline generation error
       this.logger.error("pipeline generation failed", {
         type: "pipeline.generation.error",
-        platform,
-        message,
         error:
           error instanceof Error
             ? {
@@ -177,13 +165,10 @@ export class Processor {
                 stack: error.stack
               }
             : error,
-        platform: userInput?.pluginId || "unknown",
-        message: userInput?.rawMessage || "",
-        contextChain: task.contextChain,
-        generationContext: pipelineContext,
+        pipelineContext,
         template: generatePipelineTemplate(pipelineContext)
       });
-      return []; // Return empty pipeline on error
+      throw error;
     }
   }
 
@@ -193,12 +178,22 @@ export class Processor {
    * @param task - the task to execute, internally contains the context chain which is modified as the pipeline is executed
    */
   private async executePipeline(
-    pipeline: PipelineStep[],
+    pipeline: Pipeline,
     task: AgentTask
   ): Promise<void> {
     try {
-      let currentPipeline = [...pipeline];
+      let currentPipeline = [...pipeline.steps];
       let currentStepIndex = 0;
+
+      // push the related memories onto the context chain
+      const relatedMemoriesContext: Context = {
+        id: `related-memories-${Date.now()}`,
+        pluginId: "related-memories",
+        content: pipeline.relatedMemories,
+        timestamp: Date.now()
+      };
+
+      task.contextChain.push(relatedMemoriesContext);
 
       // Log initial pipeline state
       this.logger.debug("pipeline state updated", {
@@ -262,7 +257,7 @@ export class Processor {
    * @returns the modified pipeline and the modification result
    */
   private async modifyPipeline(
-    context: PipelineModificationContext,
+    modificationContext: PipelineModificationContext,
     currentStepIndex: number,
     currentPipeline: PipelineStep[]
   ): Promise<{
@@ -282,12 +277,12 @@ export class Processor {
     const availablePluginsString = JSON.stringify(availablePlugins);
 
     const template = generatePipelineModificationTemplate(
-      context,
+      modificationContext,
       availablePluginsString
     );
     this.logger.debug("evaluating pipeline modification", {
       type: "runtime.pipeline.modification.evaluating",
-      context,
+      modificationContext,
       template
     });
 
@@ -331,13 +326,13 @@ export class Processor {
           currentStepIndex,
           pipelineLength: updatedPipeline.length,
           modification,
-          contextChain: context.contextChain
+          contextChain: modificationContext.contextChain
         });
 
         // Emit pipeline modification event
         this.logger.debug("pipeline modification applied", {
           type: "runtime.pipeline.modification.applied",
-          currentStep: context.currentStep,
+          currentStep: modificationContext.currentStep,
           modifiedSteps: modification.modifiedSteps,
           pipeline: updatedPipeline
         });
@@ -425,17 +420,16 @@ export class Processor {
     step: PipelineStep,
     task: AgentTask
   ) {
-    const errorContext: ErrorContextItem = {
+    task.contextChain.push({
       id: `error-${Date.now()}`,
       pluginId: step.pluginId,
-      type: "error",
-      action: step.action,
       content: result.error || "Unknown error",
       timestamp: Date.now(),
-      error: result.error || "Unknown error",
-      failedStep: step
-    };
-    task.contextChain.push(errorContext);
+      metadata: {
+        error: result.error || "Unknown error",
+        failedStep: step
+      }
+    });
   }
 
   private updateMonitoringState(task: AgentTask) {

@@ -49,7 +49,7 @@ export class PostgresMemoryPlugin extends Plugin {
       // Construct query for document ids
       const queryFormattedResponse = await this.runtime.getObject(
         PostgresQuerySchema,
-        generateQueryTemplate(task.contextChain),
+        generateQueryTemplate(JSON.stringify(task)),
         { temperature: 0.2 }
       );
 
@@ -98,13 +98,13 @@ export class PostgresMemoryPlugin extends Plugin {
     // Get data to store in database from context chain
     const formattedResponse = await this.runtime.getObject(
       PostgresMemoryUploadSchema,
-      generateUploadDocumentTemplate(task.contextChain),
+      generateUploadDocumentTemplate(JSON.stringify(task)),
       { temperature: 0.2 }
     );
 
     const client = await this.pool.connect();
     try {
-      const conversationId = task.conversationId;
+      const conversationId = task.space.id;
       if (!conversationId) {
         return {
           success: false,
@@ -115,9 +115,9 @@ export class PostgresMemoryPlugin extends Plugin {
       }
 
       await client.query(
-        `INSERT INTO sandbox (id, conversation_id, content, timestamp)
-                     VALUES ($1, $2, $3, $4)`,
-        [documentId, conversationId, formattedResponse.content, timestamp]
+        `INSERT INTO sandbox (id, content, created_at)
+                     VALUES ($1, $2, $3)`,
+        [documentId, formattedResponse.content, timestamp]
       );
     } finally {
       client.release();
@@ -135,7 +135,7 @@ export class PostgresMemoryPlugin extends Plugin {
       // Construct query from context
       const queryFormattedResponse = await this.runtime.getObject(
         PostgresQuerySchema,
-        generateQueryTemplate(task.contextChain, ["id", "content"]),
+        generateQueryTemplate(JSON.stringify(task), ["id", "content"]),
         { temperature: 0.2 }
       );
 
@@ -168,10 +168,8 @@ export class PostgresMemoryPlugin extends Plugin {
       await client.query(`
         CREATE TABLE IF NOT EXISTS sandbox (
           id TEXT PRIMARY KEY,
-          conversation_id TEXT NOT NULL,
           content TEXT NOT NULL,
-          timestamp BIGINT NOT NULL,
-          FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+          created_at BIGINT NOT NULL
         );
       `);
     } finally {

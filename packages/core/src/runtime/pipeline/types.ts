@@ -1,7 +1,41 @@
 import { z } from "zod";
 
-import { BaseContextItem } from "./agent";
+import { Space } from "../providers/memory";
 import { OperationConfig } from "./operations";
+
+/**
+ * Context item that makes up the context chain and the standard IO of the agent when communicating between plugins
+ *
+ * @property id - Unique identifier for this context item
+ * @property pluginId - Which plugin created this context
+ * @property content - Serialized content for model consumption
+ * @property timestamp - When this context was added
+ * @property helpfulInstruction - Instructions for how to use this context item's data
+ * @property metadata - Additional metadata for the context item
+ */
+export interface Context {
+  id: string;
+  pluginId: string;
+  content: string;
+  timestamp: number;
+  helpfulInstruction?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Defines a unit of work that the agent will complete and stores the current context chain state, as well as related information as the task is processed.
+ *
+ * @property trigger - The initial trigger context data for the task
+ * @property contextChain - The context chain that will evolve and grow as the task is processed
+ * @property space - The space that the task is being processed in, as well as related space queries to find relevant context in previous tasks
+ * @property metadata - Additional metadata for the task
+ */
+export interface AgentTask {
+  trigger: Context;
+  contextChain: Context[];
+  space: Space;
+  metadata: Record<string, unknown>;
+}
 
 /**
  * A step in the execution pipeline
@@ -17,7 +51,14 @@ export const PipelineStepSchema = z
  * Pipeline definition, a sequence of steps to execute in order
  */
 export const PipelineSchema = z
-  .array(PipelineStepSchema)
+  .object({
+    steps: z
+      .array(PipelineStepSchema)
+      .describe("A sequence of steps to execute in order"),
+    relatedMemories: z
+      .string()
+      .describe("The memory context to use for the pipeline during execution")
+  })
   .describe("A sequence of steps to execute in order");
 
 export type PipelineStep = z.infer<typeof PipelineStepSchema>;
@@ -35,34 +76,14 @@ interface AvailablePlugin {
   executors: PluginExecutor[];
 }
 
-interface ConversationMessage {
-  role: string;
-  content: string;
-  timestamp: number;
-}
-
 /**
  * Context passed to the runtime for pipeline generation
  */
 export interface PipelineGenerationContext {
-  contextChain: BaseContextItem[];
+  trigger: AgentTask["trigger"];
   availablePlugins: AvailablePlugin[];
   currentContext: {
-    platform: string;
-    message: string;
-    conversationHistory: ConversationMessage[];
-  };
-}
-
-/**
- * Represents an error that occurred during pipeline execution
- */
-export interface ErrorContextItem extends BaseContextItem {
-  type: "error";
-  error: string;
-  failedStep?: {
-    pluginId: string;
-    action: string;
+    relatedMemoriesContext: string;
   };
 }
 
@@ -70,7 +91,7 @@ export interface ErrorContextItem extends BaseContextItem {
  * Context passed to the runtime for pipeline modification evaluation
  */
 export interface PipelineModificationContext {
-  contextChain: BaseContextItem[];
+  contextChain: AgentTask["contextChain"];
   currentStep: PipelineStep;
   pipeline: PipelineStep[];
 }
@@ -94,10 +115,6 @@ export const PipelineModificationSchema = z
   .describe("Result of pipeline modification evaluation");
 
 export type PipelineModification = z.infer<typeof PipelineModificationSchema>;
-
-export type ContextItemWithHistory = BaseContextItem & {
-  messageHistory: { role: string; content: string; timestamp: number }[];
-};
 
 export interface GetObjectConfig extends OperationConfig {
   maxRetries?: number;

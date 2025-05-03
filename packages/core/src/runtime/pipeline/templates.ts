@@ -55,29 +55,31 @@ ${formattedMessages}
 const formatCurrentContext = (context: Record<string, unknown>): string => {
   const contextOrder = {
     platform: 1,
-    conversation_history: 2,
+    relatedMemories: 2,
     current_message: 3
   };
 
   return Object.entries(context)
     .map(([key, value]) => {
-      if (key === "conversationHistory") {
+      if (key === "relatedMemories") {
         if (Array.isArray(value) && value.every(isConversationMessage)) {
           return formatConversationHistory(value);
         }
-        return "";
+        return `<relatedMemories>${JSON.stringify(value, null, 2)}</relatedMemories>`;
       }
       if (key === "platform") return `<platform>${String(value)}</platform>`;
       if (key === "message")
         return `<current_message>${String(value)}</current_message>`;
+      if (key === "trigger")
+        return `<current_message>${JSON.stringify(value, null, 2)}</current_message>`;
       return `${key}: ${value}`;
     })
     .filter(Boolean)
     .sort((a, b) => {
       const getOrder = (str: string) => {
         if (str.includes("<platform>")) return contextOrder.platform;
-        if (str.includes("<conversation_history>"))
-          return contextOrder.conversation_history;
+        if (str.includes("<relatedMemories>"))
+          return contextOrder.relatedMemories;
         if (str.includes("<current_message>"))
           return contextOrder.current_message;
         return 99;
@@ -210,8 +212,14 @@ IMPORTANT: Return ONLY the raw JSON array. Do NOT wrap it in code blocks or add 
 export function generatePipelineTemplate(
   context: PipelineGenerationContext
 ): string {
+  // Include the full trigger object in the context for the model
+  const mergedContext = {
+    ...context.currentContext,
+    trigger: context.trigger
+  };
+
   const pluginSection = `<plugins>\n${formatPluginDescriptions(context)}\n</plugins>`;
-  const contextSection = `<context>\n${formatCurrentContext(context.currentContext)}\n</context>`;
+  const contextSection = `<context>\n${formatCurrentContext(mergedContext)}\n</context>`;
 
   return [
     pluginSection,
@@ -355,3 +363,21 @@ The response must be valid JSON that can be parsed with JSON.parse().
     The object should satisfy this requirement:
 ${context.prompt}
 `;
+
+export function generateRelatedMemoriesTemplate(
+  relatedMemoriesContext: string
+): string {
+  return `
+  These are the related memories for your current task. What you should do is summarize them into a paragraph of text.
+
+  Your summary should be useful as if the previous messages and instructions will be useful to the agent that is now executing the pipeline.
+  Your job is to bestow previous experiences, failures, context, data, steps, and lessons you learned from the set of related memories here.
+  You can condense this into a paragraph that is ultimately understandable to another agent. You don't need to write on behalf of a human. 
+  Just make sure you include relevant contextual information as to not force the subsequent agent to engage in any guesswork.
+
+  You will be given the task context and the list of related memories. Your job is to include the relevant data for the task, including files, numbers, images, text, ids, etc.
+
+  Here are the related memories:
+  ${relatedMemoriesContext}
+  `;
+}
