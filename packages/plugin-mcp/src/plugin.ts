@@ -5,29 +5,14 @@ import { z, ZodType } from "zod";
 import { AgentTask, Plugin, PluginResult } from "@maiar-ai/core";
 
 import { generateArgumentTemplate } from "./templates";
+import { buildTransport } from "./transports";
+import { ServerConfig } from "./types";
 
 interface Tool {
   name: string;
   description?: string;
   inputSchema: unknown;
 }
-
-export interface ServerConfig {
-  /** Absolute or relative path to a .js or .py file. Ignored if `command` is provided. */
-  serverScriptPath?: string;
-  /** If supplied, the executable to run (e.g. "docker", "npx", "node") */
-  command?: string;
-  /** Arguments passed to the executable. */
-  args?: string[];
-  /** Extra environment variables for the spawned process. */
-  env?: Record<string, string>;
-
-  /** Required name passed to the underlying MCP client */
-  clientName: string;
-  /** Optional version passed to the underlying MCP client */
-  clientVersion?: string;
-}
-
 export class MCPPlugin extends Plugin {
   private readonly configs: ServerConfig[];
   private transports: StdioClientTransport[];
@@ -50,71 +35,31 @@ export class MCPPlugin extends Plugin {
 
   public async init(): Promise<void> {
     for (const cfg of this.configs) {
-      const {
-        command: explicitCommand,
-        args: explicitArgs,
-        serverScriptPath,
-        env,
-        clientName,
-        clientVersion = "1.0.0"
-      } = cfg;
-
-      // command and args resolution
-      let command: string;
-      let args: string[];
-
-      if (explicitCommand) {
-        command = explicitCommand;
-        args = explicitArgs ?? [];
-      } else if (serverScriptPath) {
-        const isPython = serverScriptPath.endsWith(".py");
-        command = isPython
-          ? process.platform === "win32"
-            ? "python"
-            : "python3"
-          : process.execPath;
-        args = [serverScriptPath];
-      } else {
-        throw new Error(
-          "MCP config needs either {command,args} or serverScriptPath"
-        );
-      }
+      const { name, version = "1.0.0" } = cfg;
 
       // create client and transport
-      const transport = new StdioClientTransport({
-        command,
-        args,
-        env: {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter(([, v]) => v !== undefined) as [
-              string,
-              string
-            ][]
-          ),
-          ...(env || {})
-        }
-      });
+      const transport = buildTransport(cfg);
       const client = new MCPClient({
-        name: clientName,
-        version: clientVersion
+        name,
+        version
       });
 
       this.logger.info("connecting to MCP server...", {
         type: "plugin-mcp.init",
-        clientName
+        name
       });
       await client.connect(transport);
 
       // register executors
       const tools = (await client.listTools())?.tools ?? [];
-      tools.forEach((tool) => this.registerToolAsExecutor(tool, clientName));
+      tools.forEach((tool) => this.registerToolAsExecutor(tool, name));
 
       this.transports.push(transport);
       this.mcps.push(client);
 
       this.logger.info("connected to MCP server successfully", {
         type: "plugin-mcp.init",
-        clientName,
+        name,
         tools: tools.map((t) => t.name)
       });
     }
@@ -174,7 +119,7 @@ export class MCPPlugin extends Plugin {
         });
 
         // Find the correct MCP client based on the prefix by matching with clientName in configs
-        const clientConfig = this.configs.find((c) => c.clientName === prefix);
+        const clientConfig = this.configs.find((c) => c.name === prefix);
         const clientIndex = clientConfig
           ? this.configs.indexOf(clientConfig)
           : -1;
