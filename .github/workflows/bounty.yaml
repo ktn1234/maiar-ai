@@ -85,7 +85,7 @@ jobs:
       - name: 💳 Pay Contributor
         id: payout
         if: steps.filter-bounty-issues.outputs.bounty_issues_to_pay != 'none'
-        uses: UraniumCorporation/solana-payout-action@v0.0.2
+        uses: UraniumCorporation/solana-payout-action@v0.0.3
         continue-on-error: true
         with:
           recipient-wallet-address: ${{ steps.extract-wallet.outputs.wallet }}
