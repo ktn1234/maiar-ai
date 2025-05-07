@@ -19,10 +19,7 @@ jobs:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Install dependencies
-        run: |
-          npm install -g pnpm
-          pnpm install -w --save-exact @actions/github@6.0.0
+      - uses: ./.github/actions/setup
 
       # Step Outputs:
       # - issues_closed (string) - "1, 2, 3" (csv) or ""
