@@ -55,6 +55,7 @@
     "docker:clogs": "docker compose logs -f"
   },
   "devDependencies": {
+    "@actions/github": "6.0.0",
     "@commitlint/cli": "19.6.1",
     "@commitlint/config-conventional": "19.6.0",
     "@commitlint/format": "19.5.0",
