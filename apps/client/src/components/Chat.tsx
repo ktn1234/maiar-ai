@@ -197,13 +197,16 @@ export function Chat() {
                         );
                       case "audio":
                         return (
-                          <Box key={key} sx={{ width: 320 }}>
-                            <audio
-                              src={seg.src}
-                              controls
-                              style={{ width: "100%" }}
-                            />
-                          </Box>
+                          <audio
+                            key={key}
+                            src={seg.src}
+                            controls
+                            style={{
+                              width: 260,
+                              maxWidth: "100%",
+                              display: "block"
+                            }}
+                          />
                         );
                       default:
                         return null;
