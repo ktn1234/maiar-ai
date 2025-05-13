@@ -1,3 +1,62 @@
+## 0.23.1-alpha.0 (2025-05-13)
+
+### 🚀 Features
+
+- adding support for isolated (or remote) mcp servers ([#151](https://github.com/UraniumCorporation/maiar-ai/pull/151))
+- ⚠️  **core:** rework and refactor memory for group chats ([#139](https://github.com/UraniumCorporation/maiar-ai/pull/139))
+- ⚠️  **core:** capability declaration and compatibility transformation ([#154](https://github.com/UraniumCorporation/maiar-ai/pull/154))
+
+### 💅 Refactors
+
+- **core:** clean up and reorganize pipeline related code ([#118](https://github.com/UraniumCorporation/maiar-ai/pull/118))
+- **plugin-codex:** ♻️ invoke codex via npx instead of direct binary call ([#119](https://github.com/UraniumCorporation/maiar-ai/pull/119))
+
+### 📖 Documentation
+
+- 📝 add contributors to README.md ([#125](https://github.com/UraniumCorporation/maiar-ai/pull/125))
+- 📝 update quickstart section in README.md ([#124](https://github.com/UraniumCorporation/maiar-ai/pull/124))
+- 📝 add star history to README.md ([#126](https://github.com/UraniumCorporation/maiar-ai/pull/126))
+- 📝update contributing guide commit history, conventional commits, and pull requests section ([#137](https://github.com/UraniumCorporation/maiar-ai/pull/137))
+- add SECURITY.md ([#140](https://github.com/UraniumCorporation/maiar-ai/pull/140))
+- fix link in security.md ([#144](https://github.com/UraniumCorporation/maiar-ai/pull/144))
+- **release:** 📝 update changelog releases to use Nx style release notes ([#121](https://github.com/UraniumCorporation/maiar-ai/pull/121))
+
+### 🏡 Chore
+
+- **client:** 🔥 remove devDep pkg @types/react-virtualized-auto-sizer@1.0.8 ([#127](https://github.com/UraniumCorporation/maiar-ai/pull/127))
+- **config:** 🔧 dynamically extend scope-enum with package and app dirs ([#150](https://github.com/UraniumCorporation/maiar-ai/pull/150))
+- **deps:** bump axios from 1.7.9 to 1.8.2 in the npm_and_yarn group ([#142](https://github.com/UraniumCorporation/maiar-ai/pull/142))
+- **deps:** bump the npm_and_yarn group across 2 directories with 1 update ([#143](https://github.com/UraniumCorporation/maiar-ai/pull/143))
+- **deps-dev:** bump vite from 6.2.0 to 6.2.6 in /apps/client ([#123](https://github.com/UraniumCorporation/maiar-ai/pull/123))
+- **deps-dev:** bump vite from 6.2.6 to 6.2.7 in the npm_and_yarn group ([#147](https://github.com/UraniumCorporation/maiar-ai/pull/147))
+- **docker:** 🐳 add Docker to containerize starter app ([#145](https://github.com/UraniumCorporation/maiar-ai/pull/145))
+- **nx,config:** 🔧 add custom dev/start scripts and nx start dependency ([#120](https://github.com/UraniumCorporation/maiar-ai/pull/120))
+- **website:** 📲 add PWA support via @docusaurus/plugin-pwa ([#149](https://github.com/UraniumCorporation/maiar-ai/pull/149))
+
+### 🤖 CI
+
+- 🚚 rename release step to pre-release ([#128](https://github.com/UraniumCorporation/maiar-ai/pull/128))
+- 👷 add stale issue/PR workflow for automatic marking and closure ([#138](https://github.com/UraniumCorporation/maiar-ai/pull/138))
+- **bounty:** ⬆️ upgrade solana-payout-action to v0.0.2 ([5c200d2](https://github.com/UraniumCorporation/maiar-ai/commit/5c200d2))
+- **bounty:** ⬆️ upgrade solana-payout-action to v0.0.3 ([0af6b51](https://github.com/UraniumCorporation/maiar-ai/commit/0af6b51))
+- **ci,bug:** 🐛 switch to pull_request_target for Nx Cloud integration ([#130](https://github.com/UraniumCorporation/maiar-ai/pull/130))
+- **ci,cd:** 🛂 added explicit permissions to workflows ci/pre-release/release ([#131](https://github.com/UraniumCorporation/maiar-ai/pull/131))
+- **dependabot:** 🤖 setup initial dependabot config ([#129](https://github.com/UraniumCorporation/maiar-ai/pull/129))
+- **dependabot:** 🔧 assign open-pull-requests-limit to 0 to disable version updates for npm dependencies ([#136](https://github.com/UraniumCorporation/maiar-ai/pull/136))
+- **nx:** 🔧 add NX_NO_CLOUD env var to ci/pre-release/release/publish workflows ([#146](https://github.com/UraniumCorporation/maiar-ai/pull/146))
+- **release:** 👷 add rollback gha workflow to rollback to a specific commit hash ([#155](https://github.com/UraniumCorporation/maiar-ai/pull/155))
+
+### ⚠️  Breaking Changes
+
+- ⚠️  **core:** capability declaration and compatibility transformation ([#154](https://github.com/UraniumCorporation/maiar-ai/pull/154))
+- **core:** reworks memory provider interfaces to simplify and streamline for emergent properties"
+
+### ❤️ Thank You
+
+- ktn1234 @ktn1234
+- pbit @0xPBIT
+- SolSoc
+
 ## 0.23.0 (2025-04-25)
 
 ### 🚀 Features
