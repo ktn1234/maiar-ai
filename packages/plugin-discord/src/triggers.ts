@@ -62,7 +62,10 @@ export const postListenerTrigger: DiscordTriggerFactory = (
           metadata: {
             channelId: message.channelId,
             messageId: message.id,
-            userId: message.author.id
+            userId: message.author.id,
+            mediaUrls: message.attachments.map((attachment) => attachment.url),
+            embeds: message.embeds.map((embed) => embed.url),
+            embeddedImages: message.embeds.map((embed) => embed.image?.url)
           }
         };
 
@@ -76,7 +79,7 @@ export const postListenerTrigger: DiscordTriggerFactory = (
         // store the message in memory as a task so it can be used as a related memory
         await runtime.memory.storeMemory(messageTask);
 
-        logger.info("skipping message - not intended for agent", {
+        logger.info("skipping message - currently processing another message", {
           type: "discord.message.skipped",
           content: message.content,
           channelId: message.channelId,
@@ -98,6 +101,7 @@ export const postListenerTrigger: DiscordTriggerFactory = (
         author: message.author.username,
         channelId: message.channelId,
         isMention: isMentioned,
+        mentions: discordService.clientId,
         isReply: !!message.reference?.messageId
       });
 
@@ -161,11 +165,7 @@ export const postListenerTrigger: DiscordTriggerFactory = (
           content: message.content,
           timestamp: Date.now(),
           helpfulInstruction: `Message from Discord user ${message.author.username} (${intent.reason})`,
-          metadata: {
-            channelId: message.channelId,
-            messageId: message.id,
-            userId: message.author.id
-          }
+          metadata: getMessageMetadata(message)
         };
 
         await runtime.createEvent(trigger, space);
@@ -187,11 +187,7 @@ export const postListenerTrigger: DiscordTriggerFactory = (
           pluginId: discordService.pluginId,
           content: message.content,
           timestamp: Date.now(),
-          metadata: {
-            channelId: message.channelId,
-            messageId: message.id,
-            userId: message.author.id
-          }
+          metadata: getMessageMetadata(message)
         };
 
         const messageTask: AgentTask = {
@@ -239,5 +235,19 @@ export const postListenerTrigger: DiscordTriggerFactory = (
         );
       }
     }
+  };
+};
+
+/**
+ * Helper that gets useful message metadata from a discord message
+ */
+export const getMessageMetadata = (message: Message) => {
+  return {
+    channelId: message.channelId,
+    messageId: message.id,
+    userId: message.author.id,
+    mediaUrls: message.attachments.map((attachment) => attachment.url),
+    embeds: message.embeds.map((embed) => embed.url),
+    embeddedImages: message.embeds.map((embed) => embed.image?.url)
   };
 };

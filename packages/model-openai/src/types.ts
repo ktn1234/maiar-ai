@@ -1,22 +1,4 @@
-import { z } from "zod";
-
 import { ModelRequestConfig } from "@maiar-ai/core";
-
-export const TEXT_GENERATION_CAPABILITY_ID = "text-generation";
-export const IMAGE_GENERATION_CAPABILITY_ID = "image-generation";
-
-declare module "@maiar-ai/core" {
-  interface ICapabilities {
-    [TEXT_GENERATION_CAPABILITY_ID]: {
-      input: z.infer<typeof textGenerationSchema.input>;
-      output: z.infer<typeof textGenerationSchema.output>;
-    };
-    [IMAGE_GENERATION_CAPABILITY_ID]: {
-      input: z.infer<typeof imageGenerationSchema.input>;
-      output: z.infer<typeof imageGenerationSchema.output>;
-    };
-  }
-}
 
 export enum OpenAITextGenerationModel {
   GPT_4O = "gpt-4o",
@@ -27,15 +9,26 @@ export enum OpenAITextGenerationModel {
   GPT_41_NANO = "gpt-4.1-nano"
 }
 
+export enum OpenAIMultiModalTextGenerationModel {
+  GPT_4O = "gpt-4o",
+  GPT_41 = "gpt-4.1"
+}
+
 export enum OpenAIImageGenerationModel {
-  DALLE2 = "dall-e-2",
-  DALLE3 = "dall-e-3"
+  DALLE_2 = "dall-e-2",
+  DALLE_3 = "dall-e-3",
+  GPT_IMAGE_1 = "gpt-image-1"
+}
+
+export enum OpenAIMultiModalImageGenerationModel {
+  GPT_IMAGE_1 = "gpt-image-1"
 }
 
 export type OpenAIModel =
   | OpenAITextGenerationModel
-  | OpenAIImageGenerationModel;
-
+  | OpenAIImageGenerationModel
+  | OpenAIMultiModalImageGenerationModel
+  | OpenAIMultiModalTextGenerationModel;
 export interface OpenAIConfig {
   apiKey: string;
   models: OpenAIModel[];
@@ -45,14 +38,3 @@ export interface OpenAIModelRequestConfig extends ModelRequestConfig {
   n?: number;
   size?: "1024x1024" | "1792x1024" | "1024x1792";
 }
-
-// Define capability schemas
-export const textGenerationSchema = {
-  input: z.string(),
-  output: z.string()
-};
-
-export const imageGenerationSchema = {
-  input: z.string(),
-  output: z.array(z.string())
-};

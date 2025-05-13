@@ -3,19 +3,23 @@ import { z } from "zod";
 
 import logger from "../../lib/logger";
 import { ICapabilities } from "../managers/model/capability/types";
-import { OperationConfig } from "../pipeline/operations";
 
 /**
  * Interface that model capabilities must implement
  */
-export interface ModelCapability<InputType = unknown, OutputType = unknown> {
+export interface ModelCapability<
+  InputType = unknown,
+  OutputType = unknown,
+  ConfigType = unknown
+> {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly input: z.ZodType<InputType>;
   readonly output: z.ZodType<OutputType>;
+  readonly config?: z.ZodType<ConfigType>;
 
-  execute(input: InputType, config?: OperationConfig): Promise<OutputType>;
+  execute(input: InputType, config?: ConfigType): Promise<OutputType>;
 }
 
 /**
@@ -77,11 +81,11 @@ export abstract class ModelProvider {
     this.capabilities.set(capability.id, capability);
   }
 
-  public getCapability<I, O>(
+  public getCapability<I, O, C = unknown>(
     capabilityId: string
-  ): ModelCapability<I, O> | undefined {
+  ): ModelCapability<I, O, C> | undefined {
     return this.capabilities.get(capabilityId) as
-      | ModelCapability<I, O>
+      | ModelCapability<I, O, C>
       | undefined;
   }
 
@@ -96,7 +100,7 @@ export abstract class ModelProvider {
   public async executeCapability<K extends keyof ICapabilities>(
     capabilityId: K,
     input: ICapabilities[K]["input"],
-    config?: ModelRequestConfig
+    config?: ICapabilities[K] extends { config: infer C } ? C : unknown
   ): Promise<ICapabilities[K]["output"]> {
     const capability = this.capabilities.get(capabilityId as string);
     if (!capability) {

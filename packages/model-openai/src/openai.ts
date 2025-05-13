@@ -1,38 +1,45 @@
+import fs from "fs";
+import mime from "mime";
 import OpenAI from "openai";
+import { toFile } from "openai/uploads";
+import os from "os";
+import path from "path";
 import { z } from "zod";
 
 import { ModelProvider, ModelRequestConfig } from "@maiar-ai/core";
 
 import {
-  imageGenerationSchema,
+  imageGenerationCapability,
+  multiModalImageGenerationCapability,
+  multiModalTextGenerationCapability,
+  textGenerationCapability
+} from "./capabilities";
+import {
   OpenAIConfig,
   OpenAIImageGenerationModel,
   OpenAIModel,
   OpenAIModelRequestConfig,
-  OpenAITextGenerationModel,
-  textGenerationSchema
-} from "./types";
-import {
-  IMAGE_GENERATION_CAPABILITY_ID,
-  TEXT_GENERATION_CAPABILITY_ID
+  OpenAIMultiModalImageGenerationModel,
+  OpenAIMultiModalTextGenerationModel,
+  OpenAITextGenerationModel
 } from "./types";
 
-// Helper functions to check model types
-const isTextGenerationModel = (
-  model: OpenAIModel
-): model is OpenAITextGenerationModel => {
-  return Object.values(OpenAITextGenerationModel).includes(
-    model as OpenAITextGenerationModel
-  );
-};
+// Pre-computed model family sets for quick capability checks
+const TEXT_MODELS = new Set<OpenAIModel>(
+  Object.values(OpenAITextGenerationModel) as OpenAIModel[]
+);
 
-const isImageGenerationModel = (
-  model: OpenAIModel
-): model is OpenAIImageGenerationModel => {
-  return Object.values(OpenAIImageGenerationModel).includes(
-    model as OpenAIImageGenerationModel
-  );
-};
+const MULTI_MODAL_TEXT_MODELS = new Set<OpenAIModel>(
+  Object.values(OpenAIMultiModalTextGenerationModel) as OpenAIModel[]
+);
+
+const IMAGE_MODELS = new Set<OpenAIModel>(
+  Object.values(OpenAIImageGenerationModel) as OpenAIModel[]
+);
+
+const MULTI_MODAL_IMAGE_MODELS = new Set<OpenAIModel>(
+  Object.values(OpenAIMultiModalImageGenerationModel) as OpenAIModel[]
+);
 
 // Constants for provider information
 const PROVIDER_ID = "openai";
@@ -52,57 +59,65 @@ export class OpenAIModelProvider extends ModelProvider {
     this.client = new OpenAI({ apiKey: config.apiKey });
     this.models = config.models;
 
-    if (this.models.some(isTextGenerationModel)) {
+    if (this.models.some((m) => TEXT_MODELS.has(m))) {
       this.addCapability({
-        id: TEXT_GENERATION_CAPABILITY_ID,
-        name: "Text generation capability",
-        description: "Generate text completions from prompts",
-        input: textGenerationSchema.input,
-        output: textGenerationSchema.output,
-        execute: this.generateText.bind(this)
+        ...textGenerationCapability,
+        execute: this.generateTextWithText.bind(this)
       });
 
       this.logger.info("add text generation capability", {
         type: "openai.model.capability.registration",
         model: this.id,
         capability: "text-generation",
-        inputSchema: textGenerationSchema.input,
-        outputSchema: textGenerationSchema.output
+        inputSchema: textGenerationCapability.input,
+        outputSchema: textGenerationCapability.output
       });
     }
 
-    if (this.models.some(isImageGenerationModel)) {
+    if (this.models.some((m) => MULTI_MODAL_TEXT_MODELS.has(m))) {
       this.addCapability({
-        id: IMAGE_GENERATION_CAPABILITY_ID,
-        name: "Image generation capability",
-        description: "Generate images from prompts",
-        input: imageGenerationSchema.input,
-        output: imageGenerationSchema.output,
-        execute: this.generateImage.bind(this)
+        ...multiModalTextGenerationCapability,
+        execute: this.generateTextMultimodal.bind(this)
+      });
+    }
+
+    if (this.models.some((m) => IMAGE_MODELS.has(m))) {
+      this.addCapability({
+        ...imageGenerationCapability,
+        execute: this.generateImageWithText.bind(this)
       });
 
       this.logger.info("add image generation capability", {
         type: "openai.model.capability.registration",
         model: this.id,
         capability: "image-generation",
-        inputSchema: imageGenerationSchema.input,
-        outputSchema: imageGenerationSchema.output
+        inputSchema: imageGenerationCapability.input,
+        outputSchema: imageGenerationCapability.output
+      });
+    }
+
+    if (this.models.some((m) => MULTI_MODAL_IMAGE_MODELS.has(m))) {
+      this.addCapability({
+        ...multiModalImageGenerationCapability,
+        execute: this.generateImageMultimodal.bind(this)
+      });
+
+      this.logger.info("add multi-modal image generation capability", {
+        type: "openai.model.capability.registration",
+        model: this.id,
+        capability: "multi-modal-image-generation",
+        inputSchema: multiModalImageGenerationCapability.input,
+        outputSchema: multiModalImageGenerationCapability.output
       });
     }
   }
-
-  public async init(): Promise<void> {}
 
   public async checkHealth(): Promise<void> {
     // Verifying if we can call the API
     try {
       await this.executeCapability(
-        TEXT_GENERATION_CAPABILITY_ID,
-        "[SYSTEM HEALTH CHECK] are you alive? please response with 'yes' only",
-        {
-          temperature: 0.7,
-          maxTokens: 5
-        }
+        textGenerationCapability.id,
+        "[SYSTEM HEALTH CHECK] are you alive? please response with 'yes' only"
       );
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -112,17 +127,29 @@ export class OpenAIModelProvider extends ModelProvider {
     }
   }
 
+  public async init(): Promise<void> {}
+
   public async shutdown(): Promise<void> {}
 
-  public async generateImage(
-    prompt: string,
+  /**
+   * Generate an image with a text prompt
+   * @param input - The text prompt to generate an image from
+   * @param config - The configuration for the image generation
+   * @returns an array of strings, each representing a URL to the generated image
+   */
+  public async generateImageWithText(
+    input: z.infer<typeof imageGenerationCapability.input>,
     config?: OpenAIModelRequestConfig
-  ): Promise<z.infer<typeof imageGenerationSchema.output>> {
+  ): Promise<z.infer<typeof imageGenerationCapability.output>> {
     const response = await this.client.images.generate({
-      prompt: prompt,
+      prompt: input,
       n: config?.n ?? 1,
       size: config?.size ?? "1024x1024"
     });
+
+    if (!response.data || response.data.length === 0) {
+      throw new Error("No image data returned from OpenAI");
+    }
 
     if (response.data.length !== (config?.n ?? 1)) {
       throw new Error("Unexpected number of images generated");
@@ -138,12 +165,18 @@ export class OpenAIModelProvider extends ModelProvider {
     return filteredUrls;
   }
 
-  public async generateText(
-    prompt: string,
+  /**
+   * Generate text with a text prompt
+   * @param input - The text prompt to generate text from
+   * @param config - The configuration for the text generation
+   * @returns the generated text
+   */
+  public async generateTextWithText(
+    input: z.infer<typeof textGenerationCapability.input>,
     config?: ModelRequestConfig
-  ): Promise<z.infer<typeof textGenerationSchema.output>> {
+  ): Promise<z.infer<typeof textGenerationCapability.output>> {
     try {
-      const textModel = this.models.find(isTextGenerationModel);
+      const textModel = this.models.find((m) => TEXT_MODELS.has(m));
 
       if (!textModel) {
         throw new Error("No text generation model configured");
@@ -151,7 +184,7 @@ export class OpenAIModelProvider extends ModelProvider {
 
       const completion = await this.client.chat.completions.create({
         model: textModel,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: input }],
         temperature: config?.temperature ?? 0.7,
         max_tokens: config?.maxTokens,
         stop: config?.stopSequences
@@ -169,7 +202,7 @@ export class OpenAIModelProvider extends ModelProvider {
         metadata: {
           modelId: this.id,
           capabilityId: "text-generation",
-          input: prompt,
+          input: input,
           output: content
         }
       });
@@ -185,5 +218,283 @@ export class OpenAIModelProvider extends ModelProvider {
 
       throw error;
     }
+  }
+
+  /**
+   * Generate an image with a text prompt and other images
+   * @param input - The text prompt and other images to generate an image from
+   * @param config - The configuration for the image generation
+   * @returns an array of strings, each representing a URL to the generated image
+   */
+  public async generateImageMultimodal(
+    input: z.infer<typeof multiModalImageGenerationCapability.input>,
+    config?: z.infer<
+      NonNullable<typeof multiModalImageGenerationCapability.config>
+    >
+  ): Promise<z.infer<typeof multiModalImageGenerationCapability.output>> {
+    this.logger.debug("openai.model.capability.execution.input", {
+      type: "openai.model.capability.execution.input",
+      modelId: this.id,
+      capabilityId: "multi-modal-image-generation",
+      input
+    });
+
+    // If no images are provided, call the create method
+    if (!input.images || input.images?.length === 0) {
+      const n = config?.n || 1;
+      const response = await this.client.images.generate({
+        prompt: input.prompt,
+        n,
+        size: "1024x1024",
+        model: this.models.find((m) => MULTI_MODAL_IMAGE_MODELS.has(m))
+      });
+      const filePaths: string[] = [];
+      // Use a re-usable variable with || operator for cleaner access to response data
+      const responseData = response.data || [];
+      for (let i = 0; i < responseData.length; i++) {
+        const image = responseData[i];
+        if (!image) throw new Error("No image data returned from OpenAI");
+
+        if (image.url) {
+          const tempFilePath = await this.saveImageFromUrl(
+            image.url,
+            `generated_image_${Date.now()}_${i}`
+          );
+          filePaths.push(tempFilePath);
+        } else if (image.b64_json) {
+          const tempFilePath = await this.saveImageFromBase64(
+            image.b64_json,
+            `generated_image_${Date.now()}_${i}`
+          );
+          filePaths.push(tempFilePath);
+        }
+      }
+
+      if (filePaths.length === 0) {
+        throw new Error("No valid image data to save");
+      }
+
+      return filePaths;
+    }
+
+    // If images are provided, call the edit method
+    if (input.images.length > 0) {
+      const results: string[] = [];
+      for (const image of input.images) {
+        try {
+          let imageData;
+          let fileName = `image-${results.length}`;
+          let mimeType = "image/png";
+          if (image.startsWith("http://") || image.startsWith("https://")) {
+            // Handle URL
+            const response = await fetch(image);
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch image from ${image}: ${response.status} ${response.statusText}`
+              );
+            }
+            const blob = await response.blob();
+            imageData = blob;
+            // Try to infer file extension from URL if possible
+            const urlParts = image.split(".");
+            const extension =
+              urlParts[urlParts.length - 1]?.toLowerCase() || "";
+            if (["png", "jpg", "jpeg", "webp"].includes(extension)) {
+              fileName += `.${extension}`;
+              // Use switch statement for better readability when mapping extensions to MIME types
+              switch (extension) {
+                case "png":
+                  mimeType = "image/png";
+                  break;
+                case "webp":
+                  mimeType = "image/webp";
+                  break;
+                default:
+                  mimeType = "image/jpeg";
+                  break;
+              }
+            }
+          } else {
+            // Handle local file path
+            if (!fs.existsSync(image)) {
+              throw new Error(`File does not exist at path: ${image}`);
+            }
+            const fileExtension = image.split(".").pop()?.toLowerCase() || "";
+            if (!["png", "jpg", "jpeg", "webp"].includes(fileExtension)) {
+              throw new Error(
+                `Unsupported file format for ${image}. Only PNG, JPEG, and WebP are supported for image editing.`
+              );
+            }
+            fileName += fileExtension ? `.${fileExtension}` : ".png";
+            // Use switch statement for better readability when mapping extensions to MIME types
+            switch (fileExtension) {
+              case "png":
+                mimeType = "image/png";
+                break;
+              case "webp":
+                mimeType = "image/webp";
+                break;
+              case "jpg":
+              case "jpeg":
+                mimeType = "image/jpeg";
+                break;
+              default:
+                mimeType = "image/png";
+                break;
+            }
+            imageData = fs.createReadStream(image);
+          }
+          const uploadableImage = await toFile(imageData, fileName, {
+            type: mimeType
+          });
+          // Use try/catch for error handling instead of .catch() for better readability and consistency
+          let editResponse;
+          try {
+            editResponse = await this.client.images.edit({
+              prompt: input.prompt,
+              n: config?.n || 1,
+              size: "1024x1024",
+              image: uploadableImage,
+              model: this.models.find((m) => MULTI_MODAL_IMAGE_MODELS.has(m))
+            });
+          } catch (err: unknown) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            throw new Error(
+              `API error during image edit for ${image}: ${error.message}`
+            );
+          }
+
+          if (!editResponse.data) continue;
+
+          for (let i = 0; i < editResponse.data.length; i++) {
+            const editedImage = editResponse.data[i];
+            if (!editedImage) continue;
+
+            if (editedImage.url) {
+              const tempFilePath = await this.saveImageFromUrl(
+                editedImage.url,
+                `edited_image_${Date.now()}_${results.length}_${i}`
+              );
+              results.push(tempFilePath);
+            } else if (editedImage.b64_json) {
+              const tempFilePath = await this.saveImageFromBase64(
+                editedImage.b64_json,
+                `edited_image_${Date.now()}_${results.length}_${i}`
+              );
+              results.push(tempFilePath);
+            }
+          }
+        } catch (error: unknown) {
+          console.error(`Error processing image ${image}:`, error);
+          throw new Error(
+            `Failed to process image ${image}: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      }
+
+      if (results.length === 0)
+        throw new Error("No valid edited image data to save");
+
+      this.logger.debug("openai.model.capability.execution.output", {
+        type: "openai.model.capability.execution.output",
+        modelId: this.id,
+        capabilityId: "multi-modal-image-generation",
+        results
+      });
+      return results;
+    }
+
+    return [];
+  }
+
+  /**
+   * Generate text with a text prompt and other images
+   * @param input - The text prompt and other images to generate text from
+   * @returns the generated text
+   */
+  public async generateTextMultimodal(
+    input: z.infer<typeof multiModalTextGenerationCapability.input>
+  ): Promise<z.infer<typeof multiModalTextGenerationCapability.output>> {
+    const model = this.models.find((m) => MULTI_MODAL_TEXT_MODELS.has(m));
+    if (!model) throw new Error("No multimodal text model configured");
+
+    let imageParts: OpenAI.ChatCompletionContentPartImage[] = [];
+    if (input.images && input.images.length !== 0) {
+      imageParts = await Promise.all(
+        input.images.map(
+          async (image): Promise<OpenAI.ChatCompletionContentPartImage> => {
+            if (image.startsWith("http://") || image.startsWith("https://")) {
+              return {
+                type: "image_url",
+                image_url: { url: image }
+              };
+            }
+
+            // Local file: read and convert to base64
+            const fileBuffer = fs.readFileSync(image);
+            const ext = image.split(".").pop() || "png";
+            const mimeType = mime.getType(ext) || "image/png";
+            const base64 = fileBuffer.toString("base64");
+            return {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64}` }
+            };
+          }
+        )
+      );
+    }
+
+    const response = await this.client.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "text", text: input.prompt }, ...imageParts]
+        }
+      ]
+    });
+
+    return response.choices[0]?.message?.content || "";
+  }
+
+  /**
+   * Save an image from a URL to a temporary file
+   * @param url - The URL of the image to save
+   * @param filename - The filename to save the image as
+   * @returns the path to the saved image
+   */
+  private async saveImageFromUrl(
+    url: string,
+    filename: string
+  ): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch image from ${url}: ${response.status} ${response.statusText}`
+      );
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const tempDir = os.tmpdir();
+    const filePath = path.join(tempDir, `${filename}.png`);
+    fs.writeFileSync(filePath, buffer);
+    return filePath;
+  }
+
+  /**
+   * Save an image from base64 data to a temporary file
+   * @param base64Data - The base64 data of the image to save
+   * @param filename - The filename to save the image as
+   * @returns the path to the saved image
+   */
+  private async saveImageFromBase64(
+    base64Data: string,
+    filename: string
+  ): Promise<string> {
+    const buffer = Buffer.from(base64Data, "base64");
+    const tempDir = os.tmpdir();
+    const filePath = path.join(tempDir, `${filename}.png`);
+    fs.writeFileSync(filePath, buffer);
+    return filePath;
   }
 }

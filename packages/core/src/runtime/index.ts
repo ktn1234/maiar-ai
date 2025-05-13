@@ -9,6 +9,7 @@ import { WebSocketTransport } from "../lib/winston/transports/websocket";
 import { MemoryManager } from "./managers/memory";
 import { ModelManager } from "./managers/model";
 import { TEXT_GENERATION_CAPABILITY } from "./managers/model/capability/constants";
+import { CapabilityAliasGroup } from "./managers/model/capability/transform";
 import { ICapabilities } from "./managers/model/capability/types";
 import { PluginRegistry } from "./managers/plugin";
 import { ServerManager } from "./managers/server";
@@ -22,7 +23,7 @@ import {
 } from "./pipeline/templates";
 import { GetObjectConfig } from "./pipeline/types";
 import { MemoryProvider } from "./providers/memory";
-import { ModelProvider, ModelRequestConfig } from "./providers/model";
+import { ModelProvider } from "./providers/model";
 import { Plugin } from "./providers/plugin";
 
 const REQUIRED_CAPABILITIES = [TEXT_GENERATION_CAPABILITY];
@@ -93,7 +94,7 @@ export class Runtime {
     modelProviders: ModelProvider[];
     memoryProvider: MemoryProvider;
     plugins: Plugin[];
-    capabilityAliases: string[][];
+    capabilityAliases: CapabilityAliasGroup[];
     options?: {
       logger?: LoggerOptions;
       server?: {
@@ -143,16 +144,26 @@ export class Runtime {
     }
 
     // Add capability aliases to the model manager
-    for (const aliasGroup of capabilityAliases) {
-      const canonicalId =
-        aliasGroup.find((id) => modelManager.hasCapability(id)) ??
-        (aliasGroup[0] as string);
+    for (const group of capabilityAliases) {
+      // canonical capability ID is the first one that exists on a registered model, or the first ID in the list
+      const canonical =
+        group.ids.find((id) => modelManager.hasCapability(id)) || group.ids[0];
 
-      // Register all other IDs in the group as aliases to the canonical ID
-      for (const alias of aliasGroup) {
-        if (alias !== canonicalId) {
-          modelManager.registerCapabilityAlias(alias, canonicalId);
-        }
+      if (!canonical) continue;
+
+      // register transforms (if any) on the canonical id itself
+      if (group.transforms?.length) {
+        modelManager.registerCapabilityAlias(
+          canonical,
+          canonical,
+          group.transforms
+        );
+      }
+
+      // register each non-canonical id as an alias of the canonical id
+      for (const id of group.ids) {
+        if (id === canonical) continue;
+        modelManager.registerCapabilityAlias(id, canonical, group.transforms);
       }
     }
 
@@ -178,7 +189,7 @@ export class Runtime {
       }
     );
 
-    // Validate all plugins have required capabilities implemented in the model manager
+    // Validate all the model manager has all the capabilities required by the plugins
     for (const plugin of pluginRegistry.plugins) {
       for (const capability of plugin.requiredCapabilities) {
         if (!modelManager.hasCapability(capability)) {
@@ -341,12 +352,25 @@ export class Runtime {
   }
 
   /**
-   * Execute a capability on the model manager
+   * Execute a capability through the model-manager.
+   *
+   * @typeParam K – Capability identifier literal (key of the `ICapabilities` interface).
+   * @param capabilityId – The capability ID or alias.
+   * @param input – Data validated against the capability's `input` Zod schema.
+   * @param config – Optional configuration object.
+   *
+   * The type of `config` is computed with the conditional type
+   * `ICapabilities[K] extends { config: infer C } ? C : unknown`:
+   *   • If a given capability **defines** a `config` schema, the parameter is
+   *     strongly typed as that schema (`C`).
+   *   • Otherwise the parameter collapses to `unknown`, making it truly
+   *     optional and preventing "config" from being accessed on capabilities
+   *     that don't declare one.
    */
   public async executeCapability<K extends keyof ICapabilities>(
     capabilityId: K,
     input: ICapabilities[K]["input"],
-    config?: ModelRequestConfig
+    config?: ICapabilities[K] extends { config: infer C } ? C : unknown
   ): Promise<ICapabilities[K]["output"]> {
     return this.modelManager.executeCapability(capabilityId, input, config);
   }
@@ -384,8 +408,7 @@ export class Runtime {
               });
         const response = await this.modelManager.executeCapability(
           "text-generation",
-          fullPrompt,
-          config
+          fullPrompt
         );
         lastResponse = response;
 

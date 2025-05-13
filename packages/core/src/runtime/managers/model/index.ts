@@ -1,9 +1,9 @@
 import { Logger } from "winston";
 
 import logger from "../../../lib/logger";
-import { OperationConfig } from "../../pipeline/operations";
 import { ModelProvider } from "../../providers/model";
 import { CapabilityRegistry } from "./capability";
+import { CapabilityTransformEntry } from "./capability/transform";
 import { ICapabilities } from "./capability/types";
 
 /**
@@ -13,6 +13,13 @@ export class ModelManager {
   private _modelProviders: Map<string, ModelProvider>;
   private capabilityRegistry: CapabilityRegistry;
   private capabilityAliases: Map<string, string>;
+  private capabilityAliasTransforms = new Map<
+    string,
+    {
+      canonical: string;
+      entries: CapabilityTransformEntry[];
+    }
+  >();
 
   public get logger(): Logger {
     return logger.child({ scope: "model.manager" });
@@ -155,17 +162,28 @@ export class ModelManager {
   /**
    * Register a capability alias
    */
-  public registerCapabilityAlias(alias: string, canonicalId: string): void {
+  public registerCapabilityAlias(
+    alias: string,
+    canonicalId: string,
+    transforms: CapabilityTransformEntry[] = []
+  ): void {
     if (!this.capabilityRegistry.hasCapability(canonicalId)) {
       throw new Error(`Capability ${canonicalId} not found`);
     }
     this.capabilityAliases.set(alias, canonicalId);
+    if (transforms.length > 0) {
+      this.capabilityAliasTransforms.set(alias, {
+        canonical: canonicalId,
+        entries: transforms
+      });
+    }
     this.logger.debug(
       `registered capability alias "${alias}" for "${canonicalId}"`,
       {
         type: "model.capability.alias.registered",
         alias,
-        canonicalId
+        canonicalId,
+        hasTransforms: transforms.length > 0
       }
     );
   }
@@ -176,12 +194,24 @@ export class ModelManager {
   public async executeCapability<K extends keyof ICapabilities>(
     capabilityId: K,
     input: ICapabilities[K]["input"],
-    config?: OperationConfig,
+    config?: unknown,
     modelId?: string
   ): Promise<ICapabilities[K]["output"]> {
-    // Resolve the canonical capability ID
+    // begin resolve alias and transform shape
+    let aliasMeta = this.capabilityAliasTransforms.get(capabilityId as string);
+
     const resolvedCapabilityId =
-      this.capabilityAliases.get(capabilityId as string) || capabilityId;
+      aliasMeta?.canonical ||
+      this.capabilityAliases.get(capabilityId as string) ||
+      capabilityId;
+
+    // If no meta was found for the alias itself, try the canonical id. This covers the case where the alias == canonical (we still registered transforms keyed by the canonical id).
+    if (!aliasMeta) {
+      aliasMeta = this.capabilityAliasTransforms.get(
+        resolvedCapabilityId as string
+      );
+    }
+    // end resolve alias and transform shapes
 
     // Get the effective model to use
     const effectiveModelId =
@@ -211,15 +241,97 @@ export class ModelManager {
       );
     }
 
+    // begin schema transform logic for the capability
+    let entry: CapabilityTransformEntry | undefined;
+    if (aliasMeta) {
+      // Try to find an entry whose plugin-side schemas accept the provided data
+      entry =
+        aliasMeta.entries.find((e) => {
+          // Check input schema match (if defined)
+          if (e.input) {
+            const result = e.input.plugin.safeParse(input);
+            if (!result.success) return false;
+          }
+
+          // Check config schema match (if defined and config provided)
+          if (e.config && config !== undefined) {
+            const cfgResult = e.config.plugin.safeParse(config);
+            if (!cfgResult.success) return false;
+          }
+
+          return true;
+        }) || aliasMeta.entries[0]; // Fallback to the first entry
+    }
+    // Input transform
+    let providerInput: unknown = input;
+    let providerConfig = config;
+    if (entry?.input) {
+      providerInput = entry.input.transform(
+        input,
+        entry.input.plugin,
+        entry.input.provider
+      );
+    }
+    if (entry?.config?.transform) {
+      providerConfig = entry.config.transform(
+        config,
+        entry.config.plugin,
+        entry.config.provider
+      );
+    }
+    // Validate the config against the capability's config schema if present
+    let validatedConfig = providerConfig;
+    const cfgSchema = entry?.config?.provider ?? capability.config;
+    if (cfgSchema && providerConfig !== undefined) {
+      const parsedCfg = cfgSchema.safeParse(providerConfig);
+      if (!parsedCfg.success) {
+        throw new Error(
+          `Invalid config for capability ${resolvedCapabilityId}: ${parsedCfg.error}`
+        );
+      }
+      validatedConfig = parsedCfg.data;
+    }
     // Validate the input against the capability's input schema
-    const validatedInput = capability.input.safeParse(input);
+    const validatedInput = (
+      entry?.input?.provider ?? capability.input
+    ).safeParse(providerInput);
     if (!validatedInput.success) {
       throw new Error(
         `Invalid input for capability ${resolvedCapabilityId}: ${validatedInput.error}`
       );
     }
-    const result = await capability.execute(validatedInput.data, config);
-    return capability.output.parse(result) as ICapabilities[K]["output"];
+    const rawResult = await capability.execute(
+      validatedInput.data,
+      validatedConfig
+    );
+    // Validate the provider's raw output against the provider-side schema
+    const providerOutputSchema = entry?.output?.provider ?? capability.output;
+    const providerParsedOutput = providerOutputSchema.safeParse(rawResult);
+    if (!providerParsedOutput.success) {
+      throw new Error(
+        `Invalid output from provider for capability ${resolvedCapabilityId}: ${providerParsedOutput.error}`
+      );
+    }
+
+    // Transform the output from provider shape → plugin shape (if transform is defined)
+    const transformedOutput = entry?.output
+      ? entry.output.transform(
+          providerParsedOutput.data,
+          entry.output.provider,
+          entry.output.plugin
+        )
+      : providerParsedOutput.data;
+
+    // Validate the transformed output against the plugin-side schema
+    const pluginOutputSchema = entry?.output?.plugin ?? capability.output;
+    const pluginParsedOutput = pluginOutputSchema.safeParse(transformedOutput);
+    if (!pluginParsedOutput.success) {
+      throw new Error(
+        `Invalid output for capability ${resolvedCapabilityId}: ${pluginParsedOutput.error}`
+      );
+    }
+
+    return pluginParsedOutput.data as ICapabilities[K]["output"];
   }
 
   /**

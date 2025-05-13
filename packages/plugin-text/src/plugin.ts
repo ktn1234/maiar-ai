@@ -11,13 +11,21 @@ import {
 } from "@maiar-ai/core";
 
 import {
+  multiModalTextGenerationCapability,
+  textGenerationCapability
+} from "./capabiliites";
+import {
+  DESCRIPTION,
+  GENERATE_TEXT_MULTIMODAL_TEMPLATE,
+  GENERATE_TEXT_TEMPLATE,
   generateChatResponseTemplate,
+  generateTextMultimodalTemplate,
   generateTextTemplate
 } from "./templates";
 import {
   ChatPlatformContext,
   ChatResponseSchema,
-  TEXT_GENERATION_CAPABILITY_ID
+  MultimodalPromptResponseSchema
 } from "./types";
 
 export class TextGenerationPlugin extends Plugin {
@@ -25,19 +33,28 @@ export class TextGenerationPlugin extends Plugin {
     super({
       id: "plugin-text",
       name: "Text Generation",
-      description: "Provides text generation capabilities",
-      requiredCapabilities: [TEXT_GENERATION_CAPABILITY_ID]
+      description: DESCRIPTION,
+      requiredCapabilities: [
+        textGenerationCapability.id,
+        multiModalTextGenerationCapability.id
+      ]
     });
 
     this.executors = [
       {
         name: "generate_text",
-        description: "Generates text in response to a prompt",
+        description: GENERATE_TEXT_TEMPLATE,
         fn: this.generateText.bind(this)
       },
       {
+        name: "generate_text_multimodal",
+        description: GENERATE_TEXT_MULTIMODAL_TEMPLATE,
+        fn: this.generateTextMultimodal.bind(this)
+      },
+      {
         name: "send_chat_response",
-        description: "Sends a chat response to the user",
+        description:
+          "Delivers the formatted chat response (already computed earlier in the Context Chain) back to the end-user via the platform's HTTP channel.",
         fn: this.sendChatResponse.bind(this)
       }
     ];
@@ -55,15 +72,32 @@ export class TextGenerationPlugin extends Plugin {
   }
 
   private async generateText(task: AgentTask): Promise<PluginResult> {
-    const generated = await this.runtime.executeCapability(
-      TEXT_GENERATION_CAPABILITY_ID,
-      generateTextTemplate(JSON.stringify(task)),
+    const text = await this.runtime.executeCapability(
+      textGenerationCapability.id,
+      generateTextTemplate(JSON.stringify(task))
+    );
+
+    return { success: true, data: { text } };
+  }
+
+  private async generateTextMultimodal(task: AgentTask): Promise<PluginResult> {
+    const promptResponse = await this.runtime.getObject(
+      MultimodalPromptResponseSchema,
+      generateTextMultimodalTemplate(JSON.stringify(task))
+    );
+
+    const prompt = promptResponse.prompt;
+    const images = promptResponse.images;
+
+    const text = await this.runtime.executeCapability(
+      multiModalTextGenerationCapability.id,
       {
-        temperature: 0.7
+        prompt,
+        images
       }
     );
 
-    return { success: true, data: { text: generated } };
+    return { success: true, data: { text, prompt, images } };
   }
 
   private async handleChat(req: Request, res: Response): Promise<void> {
@@ -138,8 +172,7 @@ export class TextGenerationPlugin extends Plugin {
       // Format the response based on the context chain
       const formattedResponse = await this.runtime.getObject(
         ChatResponseSchema,
-        generateChatResponseTemplate(JSON.stringify(task)),
-        { temperature: 0.2 }
+        generateChatResponseTemplate(JSON.stringify(task))
       );
 
       // Type assertion for responseHandler since TypeScript doesn't know its type
