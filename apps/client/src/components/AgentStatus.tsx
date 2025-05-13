@@ -6,7 +6,7 @@ export function AgentStatus() {
   const agentState = useAgentState();
 
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={2}>
       <Grid item xs={12} sm={4}>
         <Box
           sx={{
@@ -15,7 +15,7 @@ export function AgentStatus() {
             alignItems: "center"
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary">
             Queue
           </Typography>
           <Typography variant="h6">{agentState?.queueLength || 0}</Typography>
@@ -29,7 +29,7 @@ export function AgentStatus() {
             alignItems: "center"
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary">
             Status
           </Typography>
           <Typography variant="h6">
@@ -45,7 +45,7 @@ export function AgentStatus() {
             alignItems: "center"
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary">
             Updated
           </Typography>
           <Typography variant="h6">

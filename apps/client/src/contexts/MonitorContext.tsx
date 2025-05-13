@@ -44,24 +44,48 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   // helpers
   // ----------------------
   const openSocket = React.useCallback(() => {
+    // don't open a second socket if one is already open
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+
+    // always close stale socket before creating new one
     if (wsRef.current) wsRef.current.close();
 
     const ws = new WebSocket(urlRef.current);
     wsRef.current = ws;
 
-    ws.onopen = () => dispatch({ type: "WS_CONNECTED" });
+    ws.onopen = () => {
+      dispatch({ type: "WS_CONNECTED" });
+
+      // keep-alive ping every 20 s so proxies/browsers don't close the connection
+      const pingId = window.setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('{"type":"ping"}');
+        }
+      }, 20000);
+
+      ws.addEventListener("close", () => window.clearInterval(pingId));
+    };
+
     ws.onclose = () => {
-      dispatch({ type: "WS_DISCONNECTED" });
-      // basic reconnect every 3s
-      reconnectTimeout.current = window.setTimeout(() => openSocket(), 3000);
+      // do NOT flip connected flag; UI remains interactive
+      if (!reconnectTimeout.current) {
+        reconnectTimeout.current = window.setTimeout(() => {
+          reconnectTimeout.current = undefined;
+          openSocket();
+        }, 3000);
+      }
     };
+
     ws.onerror = () => {
-      /* ignore */
+      /* swallow errors – reconnect will handle */
     };
+
     ws.onmessage = (e) => {
       try {
         const ev = parseRaw(JSON.parse(e.data));
-        dispatch({ type: "LOG_EVENT", payload: ev });
+        if (ev.type !== "ping" && ev.type !== "pong") {
+          dispatch({ type: "LOG_EVENT", payload: ev });
+        }
       } catch (err) {
         console.error("Failed to parse monitor event", err);
       }

@@ -1,6 +1,10 @@
 import { Logger } from "winston";
 
 import { MemoryManager, PluginRegistry, Runtime } from "../..";
+import type {
+  PipelineGenerationComplete,
+  StateUpdate
+} from "../../monitor/events";
 import { PluginResult } from "../providers";
 import { Plugin } from "../providers/plugin";
 import {
@@ -123,13 +127,20 @@ export class Processor {
         steps
       });
 
-      // Log successful pipeline generation
-      this.logger.info("pipeline generation complete", {
+      // Log successful pipeline generation using canonical event object
+      const pipelineEvt: PipelineGenerationComplete = {
         type: "pipeline.generation.complete",
-        generatePipelineContext,
-        pipeline,
-        steps
-      });
+        message: "pipeline generation complete",
+        timestamp: Date.now(),
+        metadata: {
+          pipeline: {
+            steps: pipeline.steps,
+            relatedMemories: pipeline.relatedMemories
+          },
+          currentStepIndex: 0
+        }
+      };
+      this.logger.info(pipelineEvt.message, pipelineEvt);
 
       this.logger.info("generated pipeline", {
         type: "runtime.pipeline.generated",
@@ -427,12 +438,19 @@ export class Processor {
   }
 
   private updateMonitoringState(task: AgentTask) {
-    this.logger.debug("agent state update", {
-      type: "runtime.state.update",
-      state: {
-        currentContext: task,
-        lastUpdate: Date.now()
+    const stateEvt: StateUpdate = {
+      type: "state",
+      message: "agent state update",
+      timestamp: Date.now(),
+      metadata: {
+        state: {
+          queueLength: 0,
+          isRunning: true,
+          lastUpdate: Date.now(),
+          currentContext: task
+        }
       }
-    });
+    };
+    this.logger.info(stateEvt.message, stateEvt);
   }
 }
