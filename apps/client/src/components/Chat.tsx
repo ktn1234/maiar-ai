@@ -18,6 +18,7 @@ import {
 import { DEFAULT_URLS } from "../config";
 import { useWsConnected } from "../contexts/MonitorContext";
 import { useChatApi } from "../hooks/useChatApi";
+import { MessageSegment, parseMessage } from "../utils/parseMessage";
 import { AutoScroll } from "./AutoScroll";
 
 interface Message {
@@ -151,9 +152,67 @@ export function Chat() {
                     message.sender === "user" ? "primary.main" : "divider"
                 }}
               >
-                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                  {message.content}
-                </Typography>
+                {(() => {
+                  const segments = parseMessage(message.content);
+                  const renderSegment = (seg: MessageSegment, key: number) => {
+                    switch (seg.kind) {
+                      case "text":
+                        return (
+                          <Typography
+                            key={key}
+                            variant="body1"
+                            sx={{ whiteSpace: "pre-wrap" }}
+                          >
+                            {seg.text}
+                          </Typography>
+                        );
+                      case "image":
+                        return (
+                          <Box
+                            key={key}
+                            component="img"
+                            src={seg.src}
+                            alt={seg.src.split("/").pop() ?? "image"}
+                            sx={{
+                              maxWidth: 320,
+                              maxHeight: 240,
+                              borderRadius: 1,
+                              display: "block"
+                            }}
+                          />
+                        );
+                      case "video":
+                        return (
+                          <Box
+                            key={key}
+                            component="video"
+                            src={seg.src}
+                            controls
+                            sx={{
+                              width: "100%",
+                              maxWidth: 320,
+                              borderRadius: 1
+                            }}
+                          />
+                        );
+                      case "audio":
+                        return (
+                          <Box key={key} sx={{ width: 320 }}>
+                            <audio
+                              src={seg.src}
+                              controls
+                              style={{ width: "100%" }}
+                            />
+                          </Box>
+                        );
+                      default:
+                        return null;
+                    }
+                  };
+                  return (
+                    <Stack spacing={1}>{segments.map(renderSegment)}</Stack>
+                  );
+                })()}
                 <Typography
                   variant="caption"
                   sx={{
