@@ -10,11 +10,17 @@ import {
 } from "@mui/lab";
 import { Box, Paper, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
+import { useAgentState } from "../contexts/MonitorContext";
 import { AutoScroll } from "./AutoScroll";
 
 export function ContextChain() {
-  const { contextChain } = useMonitor();
+  const agentState = useAgentState();
+  // currentContext structure is not yet fully typed in frontend duplicate spec
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const contextChain = (agentState?.currentContext as any)?.contextChain as
+    | any[]
+    | undefined;
+  /* eslint-enable */
 
   /**
    * Once the agent is done running it emits an empty context chain.
@@ -88,7 +94,8 @@ export function ContextChain() {
             p: 0
           }}
         >
-          {displayChain.map((item, index) => (
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {displayChain.map((item: any, index: number) => (
             <TimelineItem key={item.id}>
               <TimelineSeparator>
                 <TimelineDot

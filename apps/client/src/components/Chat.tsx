@@ -16,8 +16,8 @@ import {
 } from "@mui/material";
 
 import { DEFAULT_URLS } from "../config";
+import { useWsConnected } from "../contexts/MonitorContext";
 import { useChatApi } from "../hooks/useChatApi";
-import { useMonitor } from "../hooks/useMonitor";
 import { AutoScroll } from "./AutoScroll";
 
 interface Message {
@@ -27,7 +27,7 @@ interface Message {
 }
 
 export function Chat() {
-  const { connected } = useMonitor();
+  const connected = useWsConnected();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [username, setUsername] = useState("user-name");

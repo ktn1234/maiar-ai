@@ -1,9 +1,9 @@
 import { Box, Grid, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
+import { useAgentState } from "../contexts/MonitorContext";
 
 export function AgentStatus() {
-  const { agentState } = useMonitor();
+  const agentState = useAgentState();
 
   return (
     <Grid container spacing={3}>

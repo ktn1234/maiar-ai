@@ -4,8 +4,8 @@ import { FixedSizeList as List } from "react-window";
 
 import { alpha, Box, Paper, Stack, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
-import { MonitorEvent } from "../types/monitor";
+import { useEvents } from "../contexts/MonitorContext";
+import { MonitorEvent } from "../types/monitorSpec";
 import { EventFilter } from "./EventFilter";
 import JsonView from "./JsonView";
 
@@ -13,7 +13,10 @@ import JsonView from "./JsonView";
 const EVENT_ITEM_HEIGHT = 220;
 
 export function Events() {
-  const { events, lastEventTime } = useMonitor();
+  const events = useEvents();
+  const lastEventTime = events.length
+    ? events[events.length - 1].timestamp
+    : undefined;
   const [filter, setFilter] = useState<string>("");
   const listRef = useRef<List>(null);
 
@@ -113,8 +116,8 @@ export function Events() {
       );
     }
 
-    // Default case for any other event with metadata
-    return event.metadata ? (
+    // Default: show the entire raw event object.
+    return (
       <Paper
         elevation={0}
         sx={{
@@ -124,9 +127,9 @@ export function Events() {
           bgcolor: "background.paper"
         }}
       >
-        <JsonView data={event.metadata} />
+        <JsonView data={event} />
       </Paper>
-    ) : null;
+    );
   };
 
   // Row renderer for the virtualized list
