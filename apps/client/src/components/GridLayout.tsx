@@ -1,4 +1,11 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { Layout, Responsive } from "react-grid-layout";
 
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
@@ -26,21 +33,21 @@ type LayoutType = {
 // Define the layout for different breakpoints
 const DEFAULT_LAYOUTS: LayoutType = {
   lg: [
-    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 3 },
+    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 2 },
     { i: "pipeline", x: 0, y: 2, w: 4, h: 12, minW: 3, minH: 6 },
     { i: "contextChain", x: 4, y: 2, w: 4, h: 12, minW: 3, minH: 6 },
     { i: "chat", x: 8, y: 2, w: 4, h: 6, minW: 3, minH: 4 },
     { i: "events", x: 8, y: 8, w: 4, h: 6, minW: 3, minH: 4 }
   ],
   md: [
-    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 3 },
+    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 2 },
     { i: "pipeline", x: 0, y: 2, w: 6, h: 12, minW: 3, minH: 6 },
     { i: "contextChain", x: 6, y: 2, w: 6, h: 12, minW: 3, minH: 6 },
     { i: "chat", x: 0, y: 14, w: 6, h: 6, minW: 3, minH: 4 },
     { i: "events", x: 6, y: 14, w: 6, h: 6, minW: 3, minH: 4 }
   ],
   sm: [
-    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 3 },
+    { i: "status", x: 0, y: 0, w: 12, h: 4, minW: 3, minH: 2 },
     { i: "pipeline", x: 0, y: 2, w: 12, h: 8, minW: 3, minH: 6 },
     { i: "contextChain", x: 0, y: 10, w: 12, h: 8, minW: 3, minH: 6 },
     { i: "chat", x: 0, y: 18, w: 12, h: 6, minW: 3, minH: 4 },
@@ -117,7 +124,25 @@ interface GridLayoutProps {
 
 // Main grid layout component
 export const GridLayout = ({ children, onResetLayout }: GridLayoutProps) => {
-  const [layouts, setLayouts] = useState<LayoutType>(DEFAULT_LAYOUTS);
+  // Resolve the initial layout only once (during first render)
+  const initialLayouts = useMemo<LayoutType>(() => {
+    try {
+      const saved = localStorage.getItem("maiarDashboardLayouts");
+      if (saved) {
+        const parsed = JSON.parse(saved) as LayoutType;
+        console.log("Loaded initial layouts from localStorage", parsed);
+        return parsed;
+      }
+    } catch (err) {
+      console.error(
+        "Failed to parse saved layouts – falling back to defaults",
+        err
+      );
+    }
+    return DEFAULT_LAYOUTS;
+  }, []);
+
+  const [layouts, setLayouts] = useState<LayoutType>(initialLayouts);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number>(1200); // Default width
   const isInitialMount = useRef<boolean>(true);
@@ -134,48 +159,47 @@ export const GridLayout = ({ children, onResetLayout }: GridLayoutProps) => {
     // Remove class to re-enable selection
     document.body.classList.remove("select-none");
 
-    // Save the current layout to localStorage after dragging is complete
-    saveLayoutToLocalStorage();
+    // Persistence handled in onLayoutChange; no op here
   };
 
   const handleResizeStop = () => {
     // Remove class to re-enable selection
     document.body.classList.remove("select-none");
 
-    // Save the current layout to localStorage after resizing is complete
-    saveLayoutToLocalStorage();
+    // Persistence handled in onLayoutChange; no op here
   };
 
-  // Function to save the current layout to localStorage
-  const saveLayoutToLocalStorage = useCallback(() => {
-    // Skip saving during initial mount or if we haven't loaded saved layouts yet
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
-    console.log("Saving layout to localStorage:", layouts);
+  // Persist the provided layouts object to localStorage
+  const persistLayouts = useCallback((nextLayouts: LayoutType) => {
     try {
-      localStorage.setItem("maiarDashboardLayouts", JSON.stringify(layouts));
-      console.log("Successfully saved layouts to localStorage");
+      localStorage.setItem(
+        "maiarDashboardLayouts",
+        JSON.stringify(nextLayouts)
+      );
+      console.log("Persisted layouts to localStorage:", nextLayouts);
     } catch (e) {
       console.error("Failed to save layouts to localStorage:", e);
     }
-  }, [layouts]);
+  }, []);
 
   // Save layouts to localStorage when changed - now just updates state
   const handleLayoutChange = useCallback(
     (_layout: Layout[], allLayouts: LayoutType) => {
-      // Skip state update during initial mount
       if (isInitialMount.current) {
+        // Just mark the first pass as done without persisting — we may still
+        // load a saved layout from localStorage in the mounting effect.
         isInitialMount.current = false;
+        setLayouts(allLayouts);
         return;
       }
 
-      // Update layouts state without saving to localStorage
+      // Always keep state in sync with the layout that RGL reports
       setLayouts(allLayouts);
+
+      // And persist it so the dashboard is restored on next load
+      persistLayouts(allLayouts);
     },
-    [setLayouts]
+    [persistLayouts]
   );
 
   // Update width on mount and window resize
@@ -219,40 +243,13 @@ export const GridLayout = ({ children, onResetLayout }: GridLayoutProps) => {
     };
   }, []);
 
-  // Load saved layouts from localStorage if available
+  // Reload after an explicit reset (layoutKey increment)
   useEffect(() => {
-    // Don't load from localStorage after a reset (when layoutKey > 0)
-    if (hasLoadedSavedLayout.current && layoutKey === 0) return;
+    if (layoutKey === 0) return;
 
-    // After a reset, we don't want to load from localStorage
-    if (layoutKey > 0) {
-      hasLoadedSavedLayout.current = true;
-      return;
-    }
-
-    const savedLayouts = localStorage.getItem("maiarDashboardLayouts");
-    console.log("Loading saved layouts from localStorage:", savedLayouts);
-    if (savedLayouts) {
-      try {
-        const parsedLayouts = JSON.parse(savedLayouts) as LayoutType;
-        console.log("Successfully parsed saved layouts:", parsedLayouts);
-        setLayouts(parsedLayouts);
-        hasLoadedSavedLayout.current = true;
-
-        // Trigger a resize after layout is loaded to ensure proper rendering
-        setTimeout(() => {
-          window.dispatchEvent(new Event("resize"));
-        }, 100);
-      } catch (e) {
-        console.error("Failed to parse saved layouts", e);
-        // Use default layouts on error
-        setLayouts(DEFAULT_LAYOUTS);
-      }
-    } else {
-      // No saved layouts found, use defaults
-      setLayouts(DEFAULT_LAYOUTS);
-      hasLoadedSavedLayout.current = true;
-    }
+    setLayouts(DEFAULT_LAYOUTS);
+    // Force a resize so RGL reflows correctly
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
   }, [layoutKey]);
 
   // Reset layouts to default
