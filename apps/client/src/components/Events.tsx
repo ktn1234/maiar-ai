@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { FixedSizeList as List } from "react-window";
+import { VariableSizeList as List } from "react-window";
 
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { IconButton } from "@mui/material";
 import { alpha, Box, Paper, Stack, Typography } from "@mui/material";
 
 import { useEvents } from "../contexts/MonitorContext";
 import { MonitorEvent } from "../types/monitorSpec";
 import { EventFilter } from "./EventFilter";
-import JsonView from "./JsonView";
+import MetadataPopover from "./MetadataPopover";
 
-// Estimated height for each event item - increased to better accommodate content
-const EVENT_ITEM_HEIGHT = 220;
+// Heights (in pixels) for collapsed/expanded event rows. Adjust as needed.
+const COLLAPSED_ITEM_HEIGHT = 140;
+const EXPANDED_ITEM_HEIGHT = 420;
 
 export function Events() {
   const events = useEvents();
@@ -19,6 +23,8 @@ export function Events() {
     : undefined;
   const [filter, setFilter] = useState<string>("");
   const listRef = useRef<List>(null);
+  // Keep track of which rows are expanded
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Auto-scroll to bottom when new events come in
   const prevEventsLengthRef = useRef(events.length);
@@ -62,74 +68,50 @@ export function Events() {
     return filterEvents(filter);
   }, [filterEvents, filter]);
 
-  const renderEventMetadata = (event: MonitorEvent) => {
-    // Special case for pipeline.generation.complete
-    if (event.type === "pipeline.generation.complete") {
-      return event.metadata?.pipeline ? (
-        <Box sx={{ width: "100%" }}>
-          <JsonView data={event.metadata.pipeline} />
-        </Box>
-      ) : null;
-    }
+  // Helper: return row height based on expansion state
+  const getItemSize = useCallback(
+    (index: number) =>
+      expandedRows.has(index) ? EXPANDED_ITEM_HEIGHT : COLLAPSED_ITEM_HEIGHT,
+    [expandedRows]
+  );
 
-    // Special case for pipeline.modification
-    if (event.type === "pipeline.modification") {
-      return (
-        <Box sx={{ width: "100%" }}>
-          <JsonView data={event.metadata} />
-        </Box>
-      );
-    }
+  // Toggle expansion for a given row index
+  const toggleExpand = (index: number) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
 
-    // Special case for pipeline.generation.start
-    if (event.type === "pipeline.generation.start") {
-      const { platform, message } = event.metadata || {};
-      return platform || message ? (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mt: 2,
-            width: "100%",
-            bgcolor: "background.paper"
-          }}
-        >
-          <JsonView data={{ platform, message }} />
-        </Paper>
-      ) : null;
+    // Tell the virtual list to recalculate sizes after this index
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(index);
     }
+  };
 
-    // Special case for state events
-    if (event.type === "state" && event.metadata?.state) {
-      return (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mt: 2,
-            width: "100%",
-            bgcolor: "background.paper"
-          }}
-        >
-          <JsonView data={event.metadata.state} />
-        </Paper>
-      );
+  /**
+   * Decide which slice of the event we want to visualise for metadata.
+   * Returns undefined if there is nothing interesting for this event.
+   */
+  const extractEventMetadata = (event: MonitorEvent): unknown | undefined => {
+    switch (event.type) {
+      case "pipeline.generation.complete":
+        return event.metadata?.pipeline;
+      case "pipeline.modification":
+        return event.metadata;
+      case "pipeline.generation.start": {
+        const { platform, message } = event.metadata || {};
+        return platform || message ? { platform, message } : undefined;
+      }
+      case "state":
+        return event.metadata?.state;
+      default:
+        return event; // fall back to the whole event
     }
-
-    // Default: show the entire raw event object.
-    return (
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mt: 2,
-          width: "100%",
-          bgcolor: "background.paper"
-        }}
-      >
-        <JsonView data={event} />
-      </Paper>
-    );
   };
 
   // Row renderer for the virtualized list
@@ -141,6 +123,7 @@ export function Events() {
     style: React.CSSProperties;
   }) => {
     const event = displayEvents[index];
+    const isExpanded = expandedRows.has(index);
 
     return (
       <div
@@ -158,8 +141,8 @@ export function Events() {
           sx={{
             p: 2,
             width: "100%",
-            height: `${EVENT_ITEM_HEIGHT - 16}px`,
-            overflow: "auto", // Allow scrolling within each event box
+            height: "100%",
+            overflow: "hidden", // Prevent internal scroll trapping
             display: "block",
             bgcolor: "background.paper",
             border: 1,
@@ -171,17 +154,37 @@ export function Events() {
             }
           }}
         >
-          <Stack spacing={1}>
-            <Typography
-              variant="subtitle2"
+          <Stack spacing={1} sx={{ height: "100%" }}>
+            {/* Header row with type and expand/collapse button */}
+            <Box
               sx={{
-                color: "primary.main",
-                fontWeight: 500
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
               }}
             >
-              {event.type}
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  color: "primary.main",
+                  fontWeight: 500
+                }}
+              >
+                {event.type}
+              </Typography>
+              <Box>
+                <IconButton size="small" onClick={() => toggleExpand(index)}>
+                  {isExpanded ? (
+                    <ExpandLessIcon fontSize="inherit" />
+                  ) : (
+                    <ExpandMoreIcon fontSize="inherit" />
+                  )}
+                </IconButton>
+              </Box>
+            </Box>
+            <Typography variant="body1" noWrap={!isExpanded}>
+              {event.message}
             </Typography>
-            <Typography variant="body1">{event.message}</Typography>
             <Typography
               variant="caption"
               sx={{
@@ -191,7 +194,16 @@ export function Events() {
             >
               {new Date(event.timestamp).toLocaleString()}
             </Typography>
-            {renderEventMetadata(event)}
+            {/* Show metadata only when expanded */}
+            {isExpanded &&
+              (() => {
+                const metadata = extractEventMetadata(event);
+                return metadata ? (
+                  <Box sx={{ mt: 1 }}>
+                    <MetadataPopover data={metadata} />
+                  </Box>
+                ) : null;
+              })()}
           </Stack>
         </Paper>
       </div>
@@ -242,7 +254,7 @@ export function Events() {
                 height={height}
                 width={width}
                 itemCount={displayEvents.length}
-                itemSize={EVENT_ITEM_HEIGHT}
+                itemSize={getItemSize}
                 overscanCount={2}
               >
                 {Row}
