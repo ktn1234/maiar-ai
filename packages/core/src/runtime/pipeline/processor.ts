@@ -60,6 +60,10 @@ export class Processor {
    * @returns
    */
   private async createPipeline(task: AgentTask): Promise<Pipeline> {
+    this.updateMonitoringState(task, {
+      isRunning: true
+    });
+
     // Get all available executors from plugins
     const availablePlugins = this.pluginRegistry.plugins.map(
       (plugin: Plugin) => ({
@@ -85,6 +89,10 @@ export class Processor {
         relatedMemories
       })
     );
+
+    this.updateMonitoringState(task, {
+      relatedMemories: relatedMemoriesContext
+    });
 
     this.logger.debug("related memories context", {
       type: "runtime.pipeline.related.memories",
