@@ -45,6 +45,15 @@ export interface AgentStatePayload {
   isRunning: boolean;
   lastUpdate: number;
   currentContext?: unknown;
+
+  // --- pipeline UI fields (optional) ---
+  pipeline?: Array<{ pluginId: string; action: string }>;
+  relatedMemories?: string;
+  currentStepIndex?: number;
+  currentStep?: { pluginId: string; action: string };
+  modifiedSteps?: Array<{ pluginId: string; action: string }>;
+  explanation?: string;
+  modificationCheckInProgress?: boolean;
 }
 
 export interface StateUpdate extends BaseEvent {
@@ -54,9 +63,4 @@ export interface StateUpdate extends BaseEvent {
   };
 }
 
-export type MonitorEvent =
-  | PipelineGenerationComplete
-  | PipelineStepExecuted
-  | PipelineModificationApplied
-  | StateUpdate
-  | BaseEvent;
+export type MonitorEvent = StateUpdate | BaseEvent;

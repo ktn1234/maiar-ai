@@ -1,21 +1,21 @@
 import { Grid, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 import { useAgentState } from "../contexts/MonitorContext";
+
+const StyledGridItem = styled(Grid)({
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center"
+});
 
 export function AgentStatus() {
   const agentState = useAgentState();
 
   return (
     <Grid container>
-      <Grid
-        size={4}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center"
-        }}
-      >
+      <StyledGridItem size={4}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -27,16 +27,8 @@ export function AgentStatus() {
         <Typography variant="body1" padding={0}>
           {agentState?.queueLength || 0}
         </Typography>
-      </Grid>
-      <Grid
-        size={4}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center"
-        }}
-      >
+      </StyledGridItem>
+      <StyledGridItem size={4}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -48,16 +40,8 @@ export function AgentStatus() {
         <Typography variant="body1" padding={0}>
           {agentState?.isRunning ? "Running" : "Idle"}
         </Typography>
-      </Grid>
-      <Grid
-        size={4}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center"
-        }}
-      >
+      </StyledGridItem>
+      <StyledGridItem size={4}>
         <Typography
           variant="caption"
           color="text.secondary"
@@ -71,7 +55,7 @@ export function AgentStatus() {
             ? new Date(agentState.lastUpdate).toLocaleTimeString()
             : "-"}
         </Typography>
-      </Grid>
+      </StyledGridItem>
     </Grid>
   );
 }

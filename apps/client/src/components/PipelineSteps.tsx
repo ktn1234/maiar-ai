@@ -1,3 +1,4 @@
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import {
   Timeline,
   TimelineConnector,
@@ -20,6 +21,8 @@ interface PipelineStepsProps {
   modifiedSteps?: PipelineStep[];
   currentStep?: PipelineStep;
   explanation?: string;
+  modificationCheckInProgress?: boolean;
+  isRunning?: boolean;
 }
 
 const StyledTimelineItem = styled(TimelineItem)({
@@ -60,7 +63,9 @@ export function PipelineSteps({
   relatedMemories,
   modifiedSteps,
   currentStep,
-  explanation
+  explanation,
+  modificationCheckInProgress,
+  isRunning
 }: PipelineStepsProps) {
   // Find the index where modification starts
   const modificationStartIndex = modifiedSteps
@@ -267,6 +272,65 @@ export function PipelineSteps({
           </Typography>
         </Paper>
       )}
+      {/* Static modification-check status */}
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: "1200px",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1
+        }}
+      >
+        <FiberManualRecordIcon
+          fontSize="small"
+          sx={{
+            color: modificationCheckInProgress ? "warning.main" : "divider",
+            transition: "color 0.3s ease"
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: "monospace",
+            color: modificationCheckInProgress
+              ? "warning.main"
+              : "text.secondary"
+          }}
+        >
+          Modification Check {modificationCheckInProgress ? "Running" : "Idle"}
+        </Typography>
+      </Box>
+
+      {/* Pipeline overall running/completed indicator */}
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: "1200px",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1
+        }}
+      >
+        <FiberManualRecordIcon
+          fontSize="small"
+          sx={{
+            color: isRunning ? "warning.main" : "success.main",
+            transition: "color 0.3s ease"
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: "monospace",
+            color: isRunning ? "warning.main" : "success.main"
+          }}
+        >
+          Pipeline {isRunning ? "Running" : "Completed"}
+        </Typography>
+      </Box>
 
       {/* Original pipeline steps */}
       <Box sx={{ width: "100%", maxWidth: "1200px" }}>

@@ -1,10 +1,7 @@
 import { Logger } from "winston";
 
 import { MemoryManager, PluginRegistry, Runtime } from "../..";
-import type {
-  PipelineGenerationComplete,
-  StateUpdate
-} from "../../monitor/events";
+import type { StateUpdate } from "../../monitor/events";
 import { PluginResult } from "../providers";
 import { Plugin } from "../providers/plugin";
 import {
@@ -127,20 +124,13 @@ export class Processor {
         steps
       });
 
-      // Log successful pipeline generation using canonical event object
-      const pipelineEvt: PipelineGenerationComplete = {
-        type: "pipeline.generation.complete",
-        message: "pipeline generation complete",
-        timestamp: Date.now(),
-        metadata: {
-          pipeline: {
-            steps: pipeline.steps,
-            relatedMemories: pipeline.relatedMemories
-          },
-          currentStepIndex: 0
-        }
-      };
-      this.logger.info(pipelineEvt.message, pipelineEvt);
+      // Emit unified state snapshot instead of legacy generation event
+      this.updateMonitoringState(task, {
+        pipeline: pipeline.steps,
+        relatedMemories: pipeline.relatedMemories,
+        currentStepIndex: 0,
+        currentStep: pipeline.steps[0]
+      });
 
       this.logger.info("generated pipeline", {
         type: "runtime.pipeline.generated",
@@ -219,6 +209,15 @@ export class Processor {
           continue;
         }
 
+        // Snapshot BEFORE executing the step so UI can highlight long-running step
+        this.updateMonitoringState(task, {
+          pipeline: currentPipeline,
+          relatedMemories: pipeline.relatedMemories,
+          currentStepIndex,
+          currentStep,
+          modificationCheckInProgress: false
+        });
+
         const result = await this.executePipelineStep(currentStep, task);
 
         if (!result.success) {
@@ -226,31 +225,83 @@ export class Processor {
           this.pushErrorToContextChain(result, currentStep, task);
 
           // Update monitoring state after error context changes
-          this.updateMonitoringState(task);
+          this.updateMonitoringState(task, {
+            pipeline: currentPipeline,
+            relatedMemories: pipeline.relatedMemories,
+            currentStepIndex,
+            currentStep
+          });
         } else if (result.data) {
           // Add successful result to context chain
           this.pushResultToContextChain(result, currentStep, task);
 
           // Update monitoring state after context changes
-          this.updateMonitoringState(task);
+          this.updateMonitoringState(task, {
+            pipeline: currentPipeline,
+            relatedMemories: pipeline.relatedMemories,
+            currentStepIndex,
+            currentStep
+          });
         }
 
-        // Evaluate pipeline modification with updated context
-        const { pipeline: updatedPipeline } = await this.modifyPipeline(
-          {
-            contextChain: task.contextChain,
-            currentStep,
-            pipeline: currentPipeline
-          },
+        // Emit state snapshot indicating modification evaluation started
+        this.updateMonitoringState(task, {
+          pipeline: currentPipeline,
+          relatedMemories: pipeline.relatedMemories,
           currentStepIndex,
-          currentPipeline
-        );
+          currentStep,
+          modificationCheckInProgress: true
+        });
+
+        // Evaluate pipeline modification with updated context
+        const { pipeline: updatedPipeline, modification } =
+          await this.modifyPipeline(
+            {
+              contextChain: task.contextChain,
+              currentStep,
+              pipeline: currentPipeline
+            },
+            currentStepIndex,
+            currentPipeline
+          );
 
         currentPipeline = updatedPipeline;
         currentStepIndex++;
+
+        // Emit state snapshot after evaluation completes
+        const nextStep = currentPipeline[currentStepIndex];
+        const postEvalState: {
+          pipeline: PipelineStep[];
+          relatedMemories: string;
+          currentStepIndex: number;
+          currentStep?: PipelineStep;
+          modificationCheckInProgress: boolean;
+          modifiedSteps?: PipelineStep[];
+          explanation?: string;
+        } = {
+          pipeline: currentPipeline,
+          relatedMemories: pipeline.relatedMemories,
+          currentStepIndex,
+          currentStep: nextStep,
+          modificationCheckInProgress: false
+        };
+
+        if (modification.shouldModify && modification.modifiedSteps) {
+          postEvalState.modifiedSteps = modification.modifiedSteps;
+          postEvalState.explanation = modification.explanation;
+        }
+
+        this.updateMonitoringState(task, postEvalState);
       }
     } finally {
-      this.updateMonitoringState(task);
+      this.updateMonitoringState(task, {
+        pipeline: pipeline.steps,
+        relatedMemories: pipeline.relatedMemories,
+        currentStepIndex: pipeline.steps.length,
+        currentStep: undefined,
+        modificationCheckInProgress: false,
+        isRunning: false
+      });
     }
   }
 
@@ -437,20 +488,37 @@ export class Processor {
     });
   }
 
-  private updateMonitoringState(task: AgentTask) {
+  private updateMonitoringState(
+    task: AgentTask,
+    pipelineState?: {
+      pipeline?: PipelineStep[];
+      relatedMemories?: string;
+      currentStepIndex?: number;
+      currentStep?: PipelineStep;
+      modifiedSteps?: PipelineStep[];
+      explanation?: string;
+      modificationCheckInProgress?: boolean;
+      isRunning?: boolean;
+    }
+  ) {
     const stateEvt: StateUpdate = {
       type: "state",
-      message: "agent state update",
+      message: "agent state snapshot",
       timestamp: Date.now(),
       metadata: {
         state: {
           queueLength: 0,
-          isRunning: true,
+          isRunning:
+            pipelineState && pipelineState.isRunning !== undefined
+              ? pipelineState.isRunning
+              : true,
           lastUpdate: Date.now(),
-          currentContext: task
+          currentContext: task,
+          ...pipelineState
         }
       }
     };
+
     this.logger.info(stateEvt.message, stateEvt);
   }
 }

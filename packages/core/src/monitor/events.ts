@@ -57,7 +57,22 @@ export interface AgentStatePayload {
   queueLength: number;
   isRunning: boolean;
   lastUpdate: number;
+  /** Full AgentTask (trigger + contextChain + etc.) */
   currentContext?: unknown;
+
+  /** Optional pipeline information for UI */
+  pipeline?: Array<{ pluginId: string; action: string }>;
+  relatedMemories?: string;
+  /** Index of the step currently being executed */
+  currentStepIndex?: number;
+  /** Shorthand of the current step */
+  currentStep?: { pluginId: string; action: string };
+  /** Steps added during a runtime modification */
+  modifiedSteps?: Array<{ pluginId: string; action: string }>;
+  /** Human-readable explanation for a modification */
+  explanation?: string;
+  /** Whether the runtime is currently evaluating a possible pipeline modification */
+  modificationCheckInProgress?: boolean;
 }
 
 export interface StateUpdate extends BaseEvent {

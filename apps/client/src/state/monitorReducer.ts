@@ -1,18 +1,20 @@
 import {
   AgentStatePayload,
   MonitorEvent,
-  PipelineGenerationComplete,
-  PipelineModificationApplied,
-  PipelineStepExecuted,
   StateUpdate
 } from "../types/monitorSpec";
 
 export type PipelineUIState = {
-  pipeline: Array<{ pluginId: string; action: string }>;
+  pipeline: {
+    steps: Array<{ pluginId: string; action: string }>;
+    relatedMemories: string;
+  };
   currentStepIndex?: number;
   currentStep?: { pluginId: string; action: string };
   modifiedSteps?: Array<{ pluginId: string; action: string }>;
   explanation?: string;
+  isRunning?: boolean;
+  modificationCheckInProgress?: boolean;
 };
 
 export interface MonitorState {
@@ -43,33 +45,24 @@ export function monitorReducer(
       let agentState = state.agentState;
       let pipelineState = state.pipelineState;
 
-      switch (ev.type) {
-        case "state":
-          agentState = (ev as StateUpdate).metadata.state;
-          break;
-        case "pipeline.generation.complete": {
-          const meta = (ev as PipelineGenerationComplete).metadata;
-          if (meta && meta.pipeline) {
-            pipelineState = { pipeline: meta.pipeline, currentStepIndex: 0 };
-          }
-          break;
-        }
-        case "runtime.pipeline.step.executed": {
-          const m = (ev as PipelineStepExecuted).metadata;
-          pipelineState = pipelineState
-            ? { ...pipelineState, currentStepIndex: m.currentStepIndex }
-            : pipelineState;
-          break;
-        }
-        case "runtime.pipeline.modification.applied": {
-          const m = (ev as PipelineModificationApplied).metadata;
+      if (ev.type === "state") {
+        const metaState = (ev as StateUpdate).metadata.state;
+        agentState = metaState;
+
+        // derive pipeline UI state if available
+        if (metaState.pipeline) {
           pipelineState = {
-            pipeline: m.pipeline,
-            currentStep: m.currentStep,
-            modifiedSteps: m.modifiedSteps,
-            explanation: m.explanation
+            pipeline: {
+              steps: metaState.pipeline,
+              relatedMemories: metaState.relatedMemories ?? ""
+            },
+            currentStepIndex: metaState.currentStepIndex,
+            currentStep: metaState.currentStep,
+            modifiedSteps: metaState.modifiedSteps,
+            explanation: metaState.explanation,
+            isRunning: metaState.isRunning,
+            modificationCheckInProgress: metaState.modificationCheckInProgress
           };
-          break;
         }
       }
 

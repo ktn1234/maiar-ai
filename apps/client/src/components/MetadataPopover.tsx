@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
-import { Box, Popover } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { Box, IconButton, Popover, Stack, Tooltip } from "@mui/material";
 
 import JsonView from "./JsonView";
 
@@ -69,6 +70,18 @@ export default function MetadataPopover({
     scheduleClose();
   };
 
+  // Clipboard copy handler
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore failures silently
+    }
+  };
+
   return (
     <Box
       onMouseEnter={handlePreviewMouseEnter}
@@ -101,6 +114,18 @@ export default function MetadataPopover({
         }}
         transformOrigin={{ vertical: "center", horizontal: "center" }}
       >
+        {/* Copy button */}
+        <Stack direction="row" justifyContent="flex-end" mb={1}>
+          <Tooltip title={copied ? "Copied!" : "Copy JSON"} arrow>
+            <IconButton
+              size="small"
+              onClick={handleCopy}
+              aria-label="Copy JSON"
+            >
+              <ContentCopyIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
         <JsonView data={data} />
       </Popover>
     </Box>

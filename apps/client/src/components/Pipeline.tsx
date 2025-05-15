@@ -67,6 +67,8 @@ export function Pipeline() {
           currentStep={pipeline.currentStep}
           modifiedSteps={pipeline.modifiedSteps}
           explanation={pipeline.explanation}
+          modificationCheckInProgress={pipeline.modificationCheckInProgress}
+          isRunning={pipeline.isRunning}
         />
       </AutoScroll>
     </Paper>
