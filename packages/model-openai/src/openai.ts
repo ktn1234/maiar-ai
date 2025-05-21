@@ -142,6 +142,9 @@ export class OpenAIModelProvider extends ModelProvider {
     config?: OpenAIModelRequestConfig
   ): Promise<z.infer<typeof imageGenerationCapability.output>> {
     const response = await this.client.images.generate({
+      model: this.models.find((m) => IMAGE_MODELS.has(m)) ?? "dall-e-3",
+      moderation: "low",
+      quality: "high",
       prompt: input,
       n: config?.n ?? 1,
       size: config?.size ?? "1024x1024"
@@ -155,14 +158,16 @@ export class OpenAIModelProvider extends ModelProvider {
       throw new Error("Unexpected number of images generated");
     }
 
-    const urls = response.data.map((image) => image.url).filter(Boolean);
-    const filteredUrls = urls.filter((url) => url !== undefined);
+    const filePaths = await this._processOpenAIImageData(
+      response.data,
+      "generated_image"
+    );
 
-    if (filteredUrls.length === 0) {
-      throw new Error("No valid image URLs generated");
+    if (filePaths.length === 0) {
+      throw new Error("No valid image data to save");
     }
 
-    return filteredUrls;
+    return filePaths;
   }
 
   /**
@@ -246,29 +251,18 @@ export class OpenAIModelProvider extends ModelProvider {
         prompt: input.prompt,
         n,
         size: "1024x1024",
-        model: this.models.find((m) => MULTI_MODAL_IMAGE_MODELS.has(m))
+        model: this.models.find((m) => MULTI_MODAL_IMAGE_MODELS.has(m)),
+        quality: "high",
+        moderation: "low"
       });
-      const filePaths: string[] = [];
-      // Use a re-usable variable with || operator for cleaner access to response data
-      const responseData = response.data || [];
-      for (let i = 0; i < responseData.length; i++) {
-        const image = responseData[i];
-        if (!image) throw new Error("No image data returned from OpenAI");
 
-        if (image.url) {
-          const tempFilePath = await this.saveImageFromUrl(
-            image.url,
-            `generated_image_${Date.now()}_${i}`
-          );
-          filePaths.push(tempFilePath);
-        } else if (image.b64_json) {
-          const tempFilePath = await this.saveImageFromBase64(
-            image.b64_json,
-            `generated_image_${Date.now()}_${i}`
-          );
-          filePaths.push(tempFilePath);
-        }
-      }
+      if (!response.data) throw new Error("No image data returned from OpenAI");
+
+      // Use the new helper function to process image data
+      const filePaths = await this._processOpenAIImageData(
+        response.data,
+        "generated_image"
+      );
 
       if (filePaths.length === 0) {
         throw new Error("No valid image data to save");
@@ -364,26 +358,15 @@ export class OpenAIModelProvider extends ModelProvider {
             );
           }
 
-          if (!editResponse.data) continue;
+          if (!editResponse.data)
+            throw new Error("No image data returned from OpenAI");
 
-          for (let i = 0; i < editResponse.data.length; i++) {
-            const editedImage = editResponse.data[i];
-            if (!editedImage) continue;
-
-            if (editedImage.url) {
-              const tempFilePath = await this.saveImageFromUrl(
-                editedImage.url,
-                `edited_image_${Date.now()}_${results.length}_${i}`
-              );
-              results.push(tempFilePath);
-            } else if (editedImage.b64_json) {
-              const tempFilePath = await this.saveImageFromBase64(
-                editedImage.b64_json,
-                `edited_image_${Date.now()}_${results.length}_${i}`
-              );
-              results.push(tempFilePath);
-            }
-          }
+          // Use the new helper function to process edited image data
+          const editedFilePaths = await this._processOpenAIImageData(
+            editResponse.data,
+            `edited_image_${results.length}`
+          );
+          results.push(...editedFilePaths);
         } catch (error: unknown) {
           console.error(`Error processing image ${image}:`, error);
           throw new Error(
@@ -496,5 +479,75 @@ export class OpenAIModelProvider extends ModelProvider {
     const filePath = path.join(tempDir, `${filename}.png`);
     fs.writeFileSync(filePath, buffer);
     return filePath;
+  }
+
+  /**
+   * Process OpenAI image data, saving images from URLs or base64 and returning file paths.
+   * @param imageData - Array of image data objects from OpenAI API response.
+   * @param baseFileName - A base name for the saved files (e.g., "generated_image" or "edited_image")
+   * @returns A promise that resolves to an array of file paths.
+   */
+  private async _processOpenAIImageData(
+    imageData: (OpenAI.Image | undefined)[],
+    baseFileName: string = "image"
+  ): Promise<string[]> {
+    const dataUris: string[] = [];
+    if (!imageData || imageData.length === 0) {
+      return dataUris;
+    }
+
+    for (let i = 0; i < imageData.length; i++) {
+      const image = imageData[i];
+      if (!image) {
+        this.logger.warn("Encountered undefined image data in array", {
+          index: i,
+          baseFileName
+        });
+        continue;
+      }
+
+      if (image.url) {
+        try {
+          const response = await fetch(image.url);
+          if (!response.ok) {
+            this.logger.error(
+              `Failed to fetch image from OpenAI URL: ${image.url}`,
+              {
+                status: response.status,
+                statusText: response.statusText,
+                baseFileName
+              }
+            );
+            continue;
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const base64String = buffer.toString("base64");
+          const mimeType = response.headers.get("content-type") || "image/png"; // Default to image/png
+          dataUris.push(`data:${mimeType};base64,${base64String}`);
+        } catch (error: unknown) {
+          this.logger.error(
+            `Error fetching or processing image from URL: ${image.url}`,
+            {
+              error: error instanceof Error ? error.message : String(error),
+              baseFileName
+            }
+          );
+          continue;
+        }
+      } else if (image.b64_json) {
+        // OpenAI provides b64_json, assume it's PNG image data.
+        // The spec says "The base64-encoded JSON of the generated image, if response_format is b64_json."
+        // It doesn't specify the image type, but PNG is a common default.
+        dataUris.push(`data:image/png;base64,${image.b64_json}`);
+      } else {
+        this.logger.warn("Image data does not contain url or b64_json", {
+          index: i,
+          image_data: image,
+          baseFileName
+        });
+      }
+    }
+    return dataUris;
   }
 }
