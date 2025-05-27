@@ -2,6 +2,7 @@ import { Logger } from "winston";
 
 import { Runtime } from "../..";
 import logger from "../../lib/logger";
+import { StateUpdate } from "../../monitor/events";
 import { MemoryManager } from "../managers/memory";
 import { PluginRegistry } from "../managers/plugin";
 import { Processor } from "./processor";
@@ -40,6 +41,27 @@ export class Scheduler {
   }
 
   /**
+   * Emits a lightweight agent state snapshot containing queue length and running status.
+   * This is consumed by the monitor UI to keep the queue counter up-to-date.
+   */
+  private emitQueueState() {
+    const stateEvt: StateUpdate = {
+      type: "state",
+      message: "agent queue length update",
+      timestamp: Date.now(),
+      metadata: {
+        state: {
+          queueLength: this.taskQueue.length,
+          isRunning: this.isRunning,
+          lastUpdate: Date.now()
+        }
+      }
+    };
+
+    this.logger.info(stateEvt.message, stateEvt);
+  }
+
+  /**
    * Adds a task to the task queue
    * @param task - the task to add to the queue
    */
@@ -50,6 +72,9 @@ export class Scheduler {
       queueLength: this.taskQueue.length
     });
 
+    // Emit updated queue length snapshot
+    this.emitQueueState();
+
     // Start processing the queue, no-op if already started
     this.schedule();
   }
@@ -59,7 +84,12 @@ export class Scheduler {
    * @returns the first task from the queue or null if the queue is empty
    */
   private dequeue(): AgentTask | null {
-    return this.taskQueue.shift() || null;
+    const task = this.taskQueue.shift() || null;
+
+    // Emit updated queue length snapshot after removal
+    this.emitQueueState();
+
+    return task;
   }
 
   /**
@@ -102,6 +132,9 @@ export class Scheduler {
       type: "scheduler.queue.processing.complete",
       queueLength: this.taskQueue.length
     });
+
+    // Emit queue state when processing finishes (queue now empty)
+    this.emitQueueState();
   }
 
   /**

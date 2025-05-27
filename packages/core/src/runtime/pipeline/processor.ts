@@ -515,7 +515,6 @@ export class Processor {
       timestamp: Date.now(),
       metadata: {
         state: {
-          queueLength: 0,
           isRunning:
             pipelineState && pipelineState.isRunning !== undefined
               ? pipelineState.isRunning

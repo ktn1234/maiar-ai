@@ -54,7 +54,7 @@ export interface PipelineModificationApplied extends BaseEvent {
  * Agent-state updates
  * ────────────────────────────*/
 export interface AgentStatePayload {
-  queueLength: number;
+  queueLength?: number;
   isRunning: boolean;
   lastUpdate: number;
   /** Full AgentTask (trigger + contextChain + etc.) */

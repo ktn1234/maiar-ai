@@ -47,7 +47,15 @@ export function monitorReducer(
 
       if (ev.type === "state") {
         const metaState = (ev as StateUpdate).metadata.state;
-        agentState = metaState;
+        agentState = {
+          ...agentState,
+          ...metaState,
+          // Preserve existing queueLength if the snapshot omits it (undefined)
+          queueLength:
+            metaState.queueLength !== undefined
+              ? metaState.queueLength
+              : agentState?.queueLength
+        } as AgentStatePayload;
 
         // derive pipeline UI state if available
         if (metaState.pipeline) {
