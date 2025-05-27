@@ -2,19 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { VariableSizeList as List } from "react-window";
 
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { IconButton } from "@mui/material";
-import { alpha, Box, Paper, Stack, Typography } from "@mui/material";
+import CodeIcon from "@mui/icons-material/Code";
+import { alpha, Box, Paper, Popover, Stack, Typography } from "@mui/material";
 
 import { useEvents } from "../contexts/MonitorContext";
 import { MonitorEvent } from "../types/monitorSpec";
 import { EventFilter } from "./EventFilter";
-import MetadataPopover from "./MetadataPopover";
+import JsonView from "./JsonView";
 
-// Heights (in pixels) for collapsed/expanded event rows. Adjust as needed.
-const COLLAPSED_ITEM_HEIGHT = 140;
-const EXPANDED_ITEM_HEIGHT = 420;
+const ITEM_HEIGHT = 140;
 
 export function Events() {
   const events = useEvents();
@@ -23,8 +19,6 @@ export function Events() {
     : undefined;
   const [filter, setFilter] = useState<string>("");
   const listRef = useRef<List>(null);
-  // Keep track of which rows are expanded
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Auto-scroll to bottom when new events come in
   const prevEventsLengthRef = useRef(events.length);
@@ -69,29 +63,7 @@ export function Events() {
   }, [filterEvents, filter]);
 
   // Helper: return row height based on expansion state
-  const getItemSize = useCallback(
-    (index: number) =>
-      expandedRows.has(index) ? EXPANDED_ITEM_HEIGHT : COLLAPSED_ITEM_HEIGHT,
-    [expandedRows]
-  );
-
-  // Toggle expansion for a given row index
-  const toggleExpand = (index: number) => {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-
-    // Tell the virtual list to recalculate sizes after this index
-    if (listRef.current) {
-      listRef.current.resetAfterIndex(index);
-    }
-  };
+  const getItemSize = useCallback(() => ITEM_HEIGHT, []);
 
   /**
    * Decide which slice of the event we want to visualise for metadata.
@@ -123,7 +95,16 @@ export function Events() {
     style: React.CSSProperties;
   }) => {
     const event = displayEvents[index];
-    const isExpanded = expandedRows.has(index);
+    // Local state for popover anchor
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+    const handleMouseEnter = (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+
+    const handleMouseLeave = () => {
+      setAnchorEl(null);
+    };
 
     return (
       <div
@@ -155,7 +136,7 @@ export function Events() {
           }}
         >
           <Stack spacing={1} sx={{ height: "100%" }}>
-            {/* Header row with type and expand/collapse button */}
+            {/* Header row with type and metadata hover icon */}
             <Box
               sx={{
                 display: "flex",
@@ -172,17 +153,41 @@ export function Events() {
               >
                 {event.type}
               </Typography>
-              <Box>
-                <IconButton size="small" onClick={() => toggleExpand(index)}>
-                  {isExpanded ? (
-                    <ExpandLessIcon fontSize="inherit" />
-                  ) : (
-                    <ExpandMoreIcon fontSize="inherit" />
-                  )}
-                </IconButton>
+              <Box
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                sx={{ display: "flex", alignItems: "center" }}
+              >
+                <CodeIcon fontSize="small" sx={{ color: "text.secondary" }} />
+
+                {(() => {
+                  const metadata = extractEventMetadata(event);
+                  return metadata ? (
+                    <Popover
+                      open={Boolean(anchorEl)}
+                      anchorEl={anchorEl}
+                      onClose={handleMouseLeave}
+                      disableRestoreFocus
+                      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                      transformOrigin={{ vertical: "top", horizontal: "left" }}
+                      PaperProps={{
+                        sx: {
+                          p: 2,
+                          maxWidth: "70vw",
+                          maxHeight: "70vh",
+                          overflow: "auto",
+                          bgcolor: "background.paper",
+                          boxShadow: 3
+                        }
+                      }}
+                    >
+                      <JsonView data={metadata} />
+                    </Popover>
+                  ) : null;
+                })()}
               </Box>
             </Box>
-            <Typography variant="body1" noWrap={!isExpanded}>
+            <Typography variant="body1" noWrap>
               {event.message}
             </Typography>
             <Typography
@@ -194,16 +199,6 @@ export function Events() {
             >
               {new Date(event.timestamp).toLocaleString()}
             </Typography>
-            {/* Show metadata only when expanded */}
-            {isExpanded &&
-              (() => {
-                const metadata = extractEventMetadata(event);
-                return metadata ? (
-                  <Box sx={{ mt: 1 }}>
-                    <MetadataPopover data={metadata} />
-                  </Box>
-                ) : null;
-              })()}
           </Stack>
         </Paper>
       </div>
