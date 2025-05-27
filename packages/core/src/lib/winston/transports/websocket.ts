@@ -77,10 +77,19 @@ export class WebSocketTransport extends Transport {
 }
 
 /**
- * Creates a new WebSocketTransport and starts a WebSocket server on the given port and path
- * @param {Object} options - The options to configure the WebSocket server
- * @param {string} options.path - The path to listen on
- * @returns {WebSocketTransport} The new WebSocketTransport
+ * Factory helper for the WebSocketTransport.
+ * By default we set `level` to "debug" so that debug-level records are forwarded
+ * to clients (console already inherits the logger level). Callers can override
+ * this by passing an `opts.level` field.
  */
-export const websocket = ({ path }: { path: string }) =>
-  new WebSocketTransport({ path });
+export const websocket = (
+  { path }: { path: string },
+  opts: TransportStreamOptions = {}
+) =>
+  new WebSocketTransport(
+    { path },
+    {
+      level: opts.level || "debug",
+      ...opts
+    }
+  );

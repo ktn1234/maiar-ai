@@ -1,60 +1,61 @@
-import { Box, Grid, Typography } from "@mui/material";
+import { Grid, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-import { useMonitor } from "../hooks/useMonitor";
+import { useAgentState } from "../contexts/MonitorContext";
+
+const StyledGridItem = styled(Grid)({
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center"
+});
 
 export function AgentStatus() {
-  const { agentState } = useMonitor();
+  const agentState = useAgentState();
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} sm={4}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center"
-          }}
+    <Grid container>
+      <StyledGridItem size={4}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          padding={0}
+          fontSize={10}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-            Queue
-          </Typography>
-          <Typography variant="h6">{agentState?.queueLength || 0}</Typography>
-        </Box>
-      </Grid>
-      <Grid item xs={12} sm={4}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center"
-          }}
+          Queue
+        </Typography>
+        <Typography variant="body1" padding={0}>
+          {agentState?.queueLength || 0}
+        </Typography>
+      </StyledGridItem>
+      <StyledGridItem size={4}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          padding={0}
+          fontSize={10}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-            Status
-          </Typography>
-          <Typography variant="h6">
-            {agentState?.isRunning ? "Running" : "Idle"}
-          </Typography>
-        </Box>
-      </Grid>
-      <Grid item xs={12} sm={4}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center"
-          }}
+          Status
+        </Typography>
+        <Typography variant="body1" padding={0}>
+          {agentState?.isRunning ? "Running" : "Idle"}
+        </Typography>
+      </StyledGridItem>
+      <StyledGridItem size={4}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          padding={0}
+          fontSize={10}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-            Updated
-          </Typography>
-          <Typography variant="h6">
-            {agentState?.lastUpdate
-              ? new Date(agentState.lastUpdate).toLocaleTimeString()
-              : "-"}
-          </Typography>
-        </Box>
-      </Grid>
+          Updated
+        </Typography>
+        <Typography variant="body1" padding={0}>
+          {agentState?.lastUpdate
+            ? new Date(agentState.lastUpdate).toLocaleTimeString()
+            : "-"}
+        </Typography>
+      </StyledGridItem>
     </Grid>
   );
 }
