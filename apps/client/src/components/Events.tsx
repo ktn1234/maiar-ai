@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { FixedSizeList as List } from "react-window";
+import { VariableSizeList as List } from "react-window";
 
-import { alpha, Box, Paper, Stack, Typography } from "@mui/material";
+import CodeIcon from "@mui/icons-material/Code";
+import { alpha, Box, Paper, Popover, Stack, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
-import { MonitorEvent } from "../types/monitor";
+import { useEvents } from "../contexts/MonitorContext";
+import { MonitorEvent } from "../types/monitorSpec";
 import { EventFilter } from "./EventFilter";
 import JsonView from "./JsonView";
 
-// Estimated height for each event item - increased to better accommodate content
-const EVENT_ITEM_HEIGHT = 220;
+const ITEM_HEIGHT = 140;
 
 export function Events() {
-  const { events, lastEventTime } = useMonitor();
+  const events = useEvents();
+  const lastEventTime = events.length
+    ? events[events.length - 1].timestamp
+    : undefined;
   const [filter, setFilter] = useState<string>("");
   const listRef = useRef<List>(null);
 
@@ -59,74 +62,28 @@ export function Events() {
     return filterEvents(filter);
   }, [filterEvents, filter]);
 
-  const renderEventMetadata = (event: MonitorEvent) => {
-    // Special case for pipeline.generation.complete
-    if (event.type === "pipeline.generation.complete") {
-      return event.metadata?.pipeline ? (
-        <Box sx={{ width: "100%" }}>
-          <JsonView data={event.metadata.pipeline} />
-        </Box>
-      ) : null;
-    }
+  // Helper: return row height based on expansion state
+  const getItemSize = useCallback(() => ITEM_HEIGHT, []);
 
-    // Special case for pipeline.modification
-    if (event.type === "pipeline.modification") {
-      return (
-        <Box sx={{ width: "100%" }}>
-          <JsonView data={event.metadata} />
-        </Box>
-      );
+  /**
+   * Decide which slice of the event we want to visualise for metadata.
+   * Returns undefined if there is nothing interesting for this event.
+   */
+  const extractEventMetadata = (event: MonitorEvent): unknown | undefined => {
+    switch (event.type) {
+      case "pipeline.generation.complete":
+        return event.metadata?.pipeline;
+      case "pipeline.modification":
+        return event.metadata;
+      case "pipeline.generation.start": {
+        const { platform, message } = event.metadata || {};
+        return platform || message ? { platform, message } : undefined;
+      }
+      case "state":
+        return event.metadata?.state;
+      default:
+        return event; // fall back to the whole event
     }
-
-    // Special case for pipeline.generation.start
-    if (event.type === "pipeline.generation.start") {
-      const { platform, message } = event.metadata || {};
-      return platform || message ? (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mt: 2,
-            width: "100%",
-            bgcolor: "background.paper"
-          }}
-        >
-          <JsonView data={{ platform, message }} />
-        </Paper>
-      ) : null;
-    }
-
-    // Special case for state events
-    if (event.type === "state" && event.metadata?.state) {
-      return (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mt: 2,
-            width: "100%",
-            bgcolor: "background.paper"
-          }}
-        >
-          <JsonView data={event.metadata.state} />
-        </Paper>
-      );
-    }
-
-    // Default case for any other event with metadata
-    return event.metadata ? (
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mt: 2,
-          width: "100%",
-          bgcolor: "background.paper"
-        }}
-      >
-        <JsonView data={event.metadata} />
-      </Paper>
-    ) : null;
   };
 
   // Row renderer for the virtualized list
@@ -138,6 +95,16 @@ export function Events() {
     style: React.CSSProperties;
   }) => {
     const event = displayEvents[index];
+    // Local state for popover anchor
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+    const handleMouseEnter = (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+
+    const handleMouseLeave = () => {
+      setAnchorEl(null);
+    };
 
     return (
       <div
@@ -155,8 +122,8 @@ export function Events() {
           sx={{
             p: 2,
             width: "100%",
-            height: `${EVENT_ITEM_HEIGHT - 16}px`,
-            overflow: "auto", // Allow scrolling within each event box
+            height: "100%",
+            overflow: "hidden", // Prevent internal scroll trapping
             display: "block",
             bgcolor: "background.paper",
             border: 1,
@@ -168,17 +135,61 @@ export function Events() {
             }
           }}
         >
-          <Stack spacing={1}>
-            <Typography
-              variant="subtitle2"
+          <Stack spacing={1} sx={{ height: "100%" }}>
+            {/* Header row with type and metadata hover icon */}
+            <Box
               sx={{
-                color: "primary.main",
-                fontWeight: 500
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
               }}
             >
-              {event.type}
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  color: "primary.main",
+                  fontWeight: 500
+                }}
+              >
+                {event.type}
+              </Typography>
+              <Box
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                sx={{ display: "flex", alignItems: "center" }}
+              >
+                <CodeIcon fontSize="small" sx={{ color: "text.secondary" }} />
+
+                {(() => {
+                  const metadata = extractEventMetadata(event);
+                  return metadata ? (
+                    <Popover
+                      open={Boolean(anchorEl)}
+                      anchorEl={anchorEl}
+                      onClose={handleMouseLeave}
+                      disableRestoreFocus
+                      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                      transformOrigin={{ vertical: "top", horizontal: "left" }}
+                      PaperProps={{
+                        sx: {
+                          p: 2,
+                          maxWidth: "70vw",
+                          maxHeight: "70vh",
+                          overflow: "auto",
+                          bgcolor: "background.paper",
+                          boxShadow: 3
+                        }
+                      }}
+                    >
+                      <JsonView data={metadata} />
+                    </Popover>
+                  ) : null;
+                })()}
+              </Box>
+            </Box>
+            <Typography variant="body1" noWrap>
+              {event.message}
             </Typography>
-            <Typography variant="body1">{event.message}</Typography>
             <Typography
               variant="caption"
               sx={{
@@ -188,7 +199,6 @@ export function Events() {
             >
               {new Date(event.timestamp).toLocaleString()}
             </Typography>
-            {renderEventMetadata(event)}
           </Stack>
         </Paper>
       </div>
@@ -239,7 +249,7 @@ export function Events() {
                 height={height}
                 width={width}
                 itemCount={displayEvents.length}
-                itemSize={EVENT_ITEM_HEIGHT}
+                itemSize={getItemSize}
                 overscanCount={2}
               >
                 {Row}

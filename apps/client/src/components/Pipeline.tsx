@@ -1,13 +1,16 @@
 import { Box, Paper, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
+import { usePipelineState } from "../contexts/MonitorContext";
 import { AutoScroll } from "./AutoScroll";
 import { PipelineSteps } from "./PipelineSteps";
 
 export function Pipeline() {
-  const { pipelineState } = useMonitor();
+  const pipelineState = usePipelineState();
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const pipeline = pipelineState as any;
+  /* eslint-enable */
 
-  if (!pipelineState?.pipeline) {
+  if (!pipeline?.pipeline) {
     return (
       <Paper
         elevation={0}
@@ -53,17 +56,19 @@ export function Pipeline() {
         flex={1}
         p={3}
         triggerValue={{
-          pipelineLength: pipelineState.pipeline?.steps.length,
-          currentStepPluginId: pipelineState.currentStep?.pluginId,
-          currentStepAction: pipelineState.currentStep?.action
+          pipelineLength: pipeline.pipeline?.steps?.length,
+          currentStepPluginId: pipeline.currentStep?.pluginId,
+          currentStepAction: pipeline.currentStep?.action
         }}
       >
         <PipelineSteps
-          steps={pipelineState.pipeline.steps}
-          relatedMemories={pipelineState.pipeline.relatedMemories}
-          currentStep={pipelineState.currentStep}
-          modifiedSteps={pipelineState.modifiedSteps}
-          explanation={pipelineState.explanation}
+          steps={pipeline.pipeline.steps}
+          relatedMemories={pipeline.pipeline.relatedMemories}
+          currentStep={pipeline.currentStep}
+          modifiedSteps={pipeline.modifiedSteps}
+          explanation={pipeline.explanation}
+          modificationCheckInProgress={pipeline.modificationCheckInProgress}
+          isRunning={pipeline.isRunning}
         />
       </AutoScroll>
     </Paper>

@@ -8,13 +8,19 @@ import {
   TimelineItem,
   TimelineSeparator
 } from "@mui/lab";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Link, Paper, Typography } from "@mui/material";
 
-import { useMonitor } from "../hooks/useMonitor";
+import { useAgentState } from "../contexts/MonitorContext";
 import { AutoScroll } from "./AutoScroll";
 
 export function ContextChain() {
-  const { contextChain } = useMonitor();
+  const agentState = useAgentState();
+  // currentContext structure is not yet fully typed in frontend duplicate spec
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const contextChain = (agentState?.currentContext as any)?.contextChain as
+    | any[]
+    | undefined;
+  /* eslint-enable */
 
   /**
    * Once the agent is done running it emits an empty context chain.
@@ -88,7 +94,8 @@ export function ContextChain() {
             p: 0
           }}
         >
-          {displayChain.map((item, index) => (
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {displayChain.map((item: any, index: number) => (
             <TimelineItem key={item.id}>
               <TimelineSeparator>
                 <TimelineDot
@@ -117,9 +124,7 @@ export function ContextChain() {
                     {new Date(item.timestamp).toLocaleTimeString()}
                   </Typography>
                 </Box>
-                <Typography
-                  variant="body2"
-                  color={item.type === "error" ? "error" : "text.primary"}
+                <Box
                   sx={{
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
@@ -130,8 +135,42 @@ export function ContextChain() {
                     borderColor: "divider"
                   }}
                 >
-                  {item.type === "error" ? item.error : item.content}
-                </Typography>
+                  <Typography
+                    variant="body2"
+                    color={item.type === "error" ? "error" : "text.primary"}
+                    component="span"
+                  >
+                    {item.type === "error" ? item.error : item.content}
+                  </Typography>
+
+                  {item.helpfulInstruction && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 1 }}
+                    >
+                      {item.helpfulInstruction}
+                    </Typography>
+                  )}
+
+                  {Array.isArray(item.citations) &&
+                    item.citations.length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        {item.citations.map((citation: string) => (
+                          <Link
+                            key={citation}
+                            href={citation}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            underline="hover"
+                            sx={{ display: "block", fontSize: 12 }}
+                          >
+                            {citation}
+                          </Link>
+                        ))}
+                      </Box>
+                    )}
+                </Box>
               </TimelineContent>
             </TimelineItem>
           ))}
