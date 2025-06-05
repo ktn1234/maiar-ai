@@ -328,17 +328,104 @@ export class Runtime {
       }
     );
 
-    await this.serverManager.stop();
+    /**
+     * Create a shallow copy of the plugin and model provider arrays so that we
+     * can safely iterate over them while they are being mutated (each
+     * unregister call removes the element from the original collection).
+     */
+    const plugins = [...this.pluginRegistry.plugins];
+    const modelProviders = [...this.modelManager.modelProviders];
 
-    for (const plugin of this.pluginRegistry.plugins) {
-      await this.pluginRegistry.unregisterPlugin(plugin);
+    // shut down the websocket transport
+    for (const transport of (logger as unknown as { transports: Transport[] })
+      .transports) {
+      if (transport instanceof WebSocketTransport) {
+        this.logger.info("closing WebSocket transport...");
+        try {
+          transport.close();
+          this.logger.info("closed WebSocket transport");
+        } catch (err) {
+          this.logger.warn("error while closing WebSocket transport", { err });
+        }
+      }
     }
 
-    await this.memoryManager.unregisterMemoryProvider();
-
-    for (const modelProvider of this.modelManager.modelProviders) {
-      await this.modelManager.unregisterModel(modelProvider);
+    // shut down the server manager
+    this.logger.info("stopping server manager...");
+    try {
+      // Prevent indefinite hang if some connection refuses to close.
+      await Promise.race([
+        this.serverManager.stop(),
+        new Promise((_resolve, reject) =>
+          setTimeout(() => reject(new Error("server.stop timeout")), 5_000)
+        )
+      ]);
+      this.logger.info("server manager stopped");
+    } catch (error) {
+      this.logger.error("failed to stop server manager", { error });
     }
+
+    // shut down the plugins in parallel
+    await Promise.all(
+      plugins.map(async (plugin) => {
+        this.logger.info(`shutting down plugin "${plugin.id}"...`);
+        try {
+          /**
+           * Each plugin shutdown is raced with a timeout so that a single hanging
+           * plugin cannot block the overall process shutdown.
+           */
+          await Promise.race([
+            this.pluginRegistry.unregisterPlugin(plugin),
+            new Promise((_resolve, reject) =>
+              setTimeout(() => reject(new Error("shutdown timeout")), 5_000)
+            )
+          ]);
+        } catch (error) {
+          this.logger.error(
+            `plugin "${plugin.id}" shutdown failed – continuing`,
+            {
+              error
+            }
+          );
+        }
+      })
+    );
+
+    // shut down the memory provider
+    this.logger.info("unregistering memory provider...");
+    try {
+      await this.memoryManager.unregisterMemoryProvider();
+    } catch (error) {
+      this.logger.error("failed to unregister memory provider", { error });
+    }
+
+    // shut down the model providers
+    for (const provider of modelProviders) {
+      this.logger.info(`unregistering model provider "${provider.id}"...`);
+      try {
+        await this.modelManager.unregisterModel(provider);
+      } catch (error) {
+        this.logger.error(
+          `model provider "${provider.id}" unregister failed – continuing`,
+          { error }
+        );
+      }
+    }
+
+    this.logger.info("runtime stop complete. closing transports...");
+
+    // shut down the transports
+    for (const transport of logger.transports) {
+      if (typeof transport.close === "function") {
+        try {
+          (transport as unknown as { close?: () => void }).close?.();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    console.log("✅ shutdown complete");
   }
 
   /**
