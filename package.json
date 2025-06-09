@@ -36,6 +36,8 @@
     "build:all": "nx run-many --target build --projects packages/*,apps/* --verbose",
     "typecheck": "nx run-many --target typecheck --projects packages/* --verbose",
     "lint": "nx run-many --target eslint:lint --projects packages/*,apps/* --verbose",
+    "test": "nx run-many --target test --projects packages/*,apps/* --verbose",
+    "clean": "nx run-many --target clean --projects packages/*,apps/* --verbose",
     "eslint": "eslint . --max-warnings 0",
     "commit": "cz",
     "commitlint": "commitlint --edit",
@@ -68,6 +70,7 @@
     "@swc/helpers": "0.5.11",
     "@trivago/prettier-plugin-sort-imports": "5.2.2",
     "@types/node": "22.13.1",
+    "@vitest/ui": "3.2.2",
     "chokidar-cli": "3.0.0",
     "commitizen": "4.3.1",
     "cz-conventional-changelog": "3.3.0",
@@ -77,7 +80,8 @@
     "prettier": "3.4.2",
     "tsup": "8.3.6",
     "typescript": "5.7.3",
-    "typescript-eslint": "8.22.0"
+    "typescript-eslint": "8.22.0",
+    "vitest": "3.2.2"
   },
   "config": {
     "commitizen": {

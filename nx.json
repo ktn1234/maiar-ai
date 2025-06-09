@@ -34,6 +34,16 @@
       "inputs": ["{workspaceRoot}/eslint.config.js"],
       "outputs": [],
       "cache": true
+    },
+    "test": {
+      "inputs": ["{workspaceRoot}/vite.config.ts", "{projectRoot}/src/**/*.ts"],
+      "outputs": [],
+      "cache": true
+    },
+    "clean": {
+      "inputs": [],
+      "outputs": [],
+      "cache": false
     }
   },
   "parallel": 20,

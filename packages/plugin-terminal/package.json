@@ -41,12 +41,12 @@
     "url": "https://github.com/UraniumCorporation/maiar-ai/issues"
   },
   "scripts": {
+    "prepublishOnly": "pnpm run build",
     "dev": "tsup --config ./tsup.config.ts --watch",
     "chat": "NODE_NO_WARNINGS=1 tsc src/scripts/chat.ts && node src/scripts/chat.js",
     "typecheck": "tsc --project tsconfig.json --noEmit false",
     "build": "tsup --config ./tsup.config.ts",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "pnpm run build"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@maiar-ai/core": "workspace:*",

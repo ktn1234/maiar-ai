@@ -47,12 +47,14 @@
     "url": "https://github.com/UraniumCorporation/maiar-ai/issues"
   },
   "scripts": {
+    "prepublishOnly": "pnpm run build",
     "dev": "tsup --config ./tsup.config.ts --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit false",
     "build": "tsup --config ./tsup.config.ts",
-    "clean": "rm -rf dist",
-    "echo": "echo \"nothing\"",
-    "prepublishOnly": "pnpm run build"
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "cors": "2.8.5",
