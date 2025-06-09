@@ -1,5 +1,7 @@
 import cors from "cors";
 import { Server } from "http";
+import fsPromises from "node:fs/promises";
+import path from "path";
 import { Logger, LoggerOptions } from "winston";
 import Transport from "winston-transport";
 import { z } from "zod";
@@ -12,15 +14,10 @@ import { TEXT_GENERATION_CAPABILITY } from "./managers/model/capability/constant
 import { CapabilityAliasGroup } from "./managers/model/capability/transform";
 import { ICapabilities } from "./managers/model/capability/types";
 import { PluginRegistry } from "./managers/plugin";
+import { PromptRegistry } from "./managers/prompt";
 import { ServerManager } from "./managers/server";
 import { AgentTask, Scheduler } from "./pipeline";
 import { formatZodSchema } from "./pipeline/operations";
-import {
-  cleanJsonString,
-  extractJson,
-  generateObjectTemplate,
-  generateRetryTemplate
-} from "./pipeline/templates";
 import { GetObjectConfig } from "./pipeline/types";
 import { MemoryProvider } from "./providers/memory";
 import { ModelProvider } from "./providers/model";
@@ -36,6 +33,7 @@ export class Runtime {
   private modelManager: ModelManager;
   private memoryManager: MemoryManager;
   private pluginRegistry: PluginRegistry;
+  private promptRegistry: PromptRegistry;
 
   private scheduler: Scheduler;
 
@@ -74,12 +72,14 @@ export class Runtime {
     modelManager: ModelManager,
     memoryManager: MemoryManager,
     pluginRegistry: PluginRegistry,
-    serverManager: ServerManager
+    serverManager: ServerManager,
+    promptRegistry: PromptRegistry
   ) {
     this.modelManager = modelManager;
     this.memoryManager = memoryManager;
     this.pluginRegistry = pluginRegistry;
     this.serverManager = serverManager;
+    this.promptRegistry = promptRegistry;
 
     this.scheduler = new Scheduler(this, memoryManager, pluginRegistry);
   }
@@ -129,6 +129,12 @@ export class Runtime {
       );
     }
 
+    const promptRegistry = new PromptRegistry();
+
+    // Register core prompt directory under namespace 'core'
+    const corePromptsDir = path.resolve(__dirname, "prompts");
+    promptRegistry.registerDirectory("core", corePromptsDir);
+
     const modelManager = new ModelManager();
     for (const modelProvider of modelProviders) {
       await modelManager.registerModel(modelProvider);
@@ -138,10 +144,42 @@ export class Runtime {
     await memoryManager.registerMemoryProvider(memoryProvider);
 
     const pluginRegistry = new PluginRegistry();
-    await pluginRegistry.registerPlugin(memoryProvider.getPlugin());
+
+    // Register the core memory plugin only once
+    const memoryPlugin = memoryProvider.getPlugin();
+    await pluginRegistry.registerPlugin(memoryPlugin);
+
+    // Register any prompts provided by the internal memory plugin
+    if (memoryPlugin.promptsDir) {
+      promptRegistry.registerDirectory(
+        memoryPlugin.id,
+        memoryPlugin.promptsDir
+      );
+    }
+
     for (const plugin of plugins) {
       await pluginRegistry.registerPlugin(plugin);
+
+      // Auto-register prompt directories if supplied by the plugin
+      const dir = plugin.promptsDir;
+      if (dir) promptRegistry.registerDirectory(plugin.id, dir);
     }
+
+    // mount the prompts routes
+    serverManager.registerRoute("get", "/prompts", async (_req, res) => {
+      try {
+        const all = await Promise.all(
+          promptRegistry.list().map(async ({ id, path }) => ({
+            id,
+            path,
+            template: (await fsPromises.readFile(path, "utf8")).trim()
+          }))
+        );
+        res.json(all);
+      } catch {
+        res.status(500).json({ error: "Failed to load prompts" });
+      }
+    });
 
     // Add capability aliases to the model manager
     for (const group of capabilityAliases) {
@@ -236,8 +274,12 @@ export class Runtime {
       modelManager,
       memoryManager,
       pluginRegistry,
-      serverManager
+      serverManager,
+      promptRegistry
     );
+
+    // Expose template registry on runtime instance
+    runtime.promptRegistry = promptRegistry;
 
     process.on("SIGINT", async () => {
       console.log();
@@ -284,6 +326,13 @@ export class Runtime {
   }
 
   /**
+   * Access to the prompt registry for plugins
+   */
+  public get templates(): PromptRegistry {
+    return this.promptRegistry;
+  }
+
+  /**
    * Start the runtime
    */
   public async start(): Promise<void> {
@@ -306,6 +355,7 @@ export class Runtime {
 
         if (trigger.route) {
           this.serverManager.registerRoute(
+            "post",
             trigger.route.path,
             trigger.route.handler,
             trigger.route.middleware
@@ -480,19 +530,24 @@ export class Runtime {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Generate prompt using template
-        const fullPrompt: string =
+        // Generate prompt using Liquid templates via the registry
+        const templateId =
+          attempt === 0 ? "core/object_template" : "core/retry_template";
+
+        const ctx =
           attempt === 0
-            ? generateObjectTemplate({
+            ? {
                 schema: formatZodSchema(schema),
                 prompt
-              })
-            : generateRetryTemplate({
+              }
+            : {
                 schema: formatZodSchema(schema),
                 prompt,
                 lastResponse: lastResponse!,
-                error: lastError!.message
-              });
+                error: (lastError as Error).message
+              };
+
+        const fullPrompt: string = await this.templates.render(templateId, ctx);
         const response = await this.modelManager.executeCapability(
           "text-generation",
           fullPrompt
@@ -500,7 +555,7 @@ export class Runtime {
         lastResponse = response;
 
         // Extract JSON from the response, handling code blocks and extra text
-        const jsonString = cleanJsonString(extractJson(response));
+        const jsonString = Runtime.extractJson(response);
 
         try {
           const parsed = JSON.parse(jsonString);
@@ -554,5 +609,14 @@ export class Runtime {
      \\__\\/         \\__\\/                     \\__\\/         \\__\\/    
      
       by Uranium Corporation`);
+  }
+
+  private static extractJson(str: string): string {
+    // Remove markdown code blocks
+    str = str.replace(/```(?:\w*\s*)\n?/g, "").replace(/```/g, "");
+
+    const matches = str.match(/\{[\s\S]*\}|\[[\s\S]*\]/g);
+    if (!matches) throw new Error("No JSON-like structure found in response");
+    return (matches[matches.length - 1] ?? "").trim();
   }
 }

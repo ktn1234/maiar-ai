@@ -28,6 +28,12 @@ export abstract class Plugin {
   /** Executors associated with the plugin. */
   public executors: Executor[];
 
+  /**
+   * Optional absolute path(s) to a directory containing Liquid prompt templates.
+   * These will be auto-registered by the Runtime when the plugin is registered.
+   */
+  public readonly promptsDir?: string | string[];
+
   /** The runtime instance assigned to the plugin. */
   private _runtime: Runtime | undefined;
 
@@ -64,21 +70,27 @@ export abstract class Plugin {
    * @param {string} params.name - Human-readable name of the plugin.
    * @param {string} params.description - Description of the plugin.
    * @param {(keyof ICapabilities)[]} params.requiredCapabilities - Capabilities required by the plugin.
+   * @param {string | string[]} [params.promptsDir] - Optional absolute path(s) to a directory containing Liquid prompt templates.
    */
   constructor({
     id,
     name,
     description,
-    requiredCapabilities
+    requiredCapabilities,
+    promptsDir
   }: {
     id: string;
     name: Resolvable<string>;
     description: Resolvable<string>;
     requiredCapabilities: (keyof ICapabilities)[];
+    promptsDir?: string | string[];
   }) {
     this.id = id;
     this.name = name;
     this.description = description;
+
+    // Store optional prompts directory/directories for automatic prompt registration
+    this.promptsDir = promptsDir;
 
     this.executors = [];
     this.triggers = [];
@@ -111,7 +123,7 @@ export abstract class Plugin {
    * If the value is a function it will be invoked with the plugin instance as
    * `this`, allowing access to runtime or other instance members.
    *
-   * The function may return a string synchronously or a Promise<string>.
+   * The function may return a string synchronously or a promise that resolves to a string.
    *
    * @param field The lazy string (static or function) to resolve.
    * @returns The resolved string value.

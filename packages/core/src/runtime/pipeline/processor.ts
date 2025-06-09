@@ -5,11 +5,6 @@ import type { StateUpdate } from "../../monitor/events";
 import { PluginResult } from "../providers";
 import { Plugin } from "../providers/plugin";
 import {
-  generatePipelineModificationTemplate,
-  generatePipelineTemplate,
-  generateRelatedMemoriesTemplate
-} from "./templates";
-import {
   AgentTask,
   Context,
   Pipeline,
@@ -85,11 +80,14 @@ export class Processor {
       limit: 10
     });
 
-    const relatedMemoriesContext = generateRelatedMemoriesTemplate(
-      JSON.stringify({
-        task: task.trigger,
-        relatedMemories
-      })
+    const relatedMemoriesContext = await this.runtime.templates.render(
+      "core/related_memories",
+      {
+        relatedMemoriesContext: JSON.stringify({
+          task: task.trigger,
+          relatedMemories
+        })
+      }
     );
 
     this.updateMonitoringState(task, {
@@ -110,9 +108,17 @@ export class Processor {
       }
     };
 
+    let generatePipelineContext = "";
+
     try {
-      // Generate the pipeline using model
-      const generatePipelineContext = generatePipelineTemplate(pipelineContext);
+      generatePipelineContext = await this.runtime.templates.render(
+        "core/pipeline_generate",
+        {
+          availablePlugins,
+          relatedMemories: relatedMemoriesContext,
+          trigger: pipelineContext.trigger
+        }
+      );
 
       this.logger.debug("generating pipeline", {
         type: "runtime.pipeline.generating",
@@ -160,7 +166,7 @@ export class Processor {
                 stack: error.stack
               }
             : error,
-        template: generatePipelineTemplate(pipelineContext)
+        template: generatePipelineContext
       });
 
       this.logger.error("pipeline generation failed", {
@@ -174,7 +180,7 @@ export class Processor {
               }
             : error,
         pipelineContext,
-        template: generatePipelineTemplate(pipelineContext)
+        template: generatePipelineContext
       });
       throw error;
     }
@@ -349,9 +355,14 @@ export class Processor {
 
     const availablePluginsString = JSON.stringify(availablePlugins);
 
-    const template = generatePipelineModificationTemplate(
-      modificationContext,
-      availablePluginsString
+    const template = await this.runtime.templates.render(
+      "core/pipeline_modify",
+      {
+        contextChain: JSON.stringify(modificationContext.contextChain, null, 2),
+        currentStep: JSON.stringify(modificationContext.currentStep, null, 2),
+        pipeline: JSON.stringify(modificationContext.pipeline, null, 2),
+        availablePlugins: availablePluginsString
+      }
     );
     this.logger.debug("evaluating pipeline modification", {
       type: "runtime.pipeline.modification.evaluating",

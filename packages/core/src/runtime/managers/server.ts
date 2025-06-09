@@ -34,7 +34,15 @@ export class ServerManager {
     return this._server;
   }
 
+  /**
+   * Register a route handler for the router
+   * @param path - The path of the route
+   * @param method - The HTTP method of the route
+   * @param handler - The handler function for the route
+   * @param middleware - The middleware functions for the route
+   */
   public registerRoute(
+    method: "get" | "post",
     path: string,
     handler: (req: Request, res: Response) => Promise<void> | void,
     middleware?: RequestHandler | RequestHandler[]
@@ -46,7 +54,7 @@ export class ServerManager {
       : [express.raw({ type: "*/*" })];
 
     // Register route with the router
-    this.router.post(
+    this.router[method](
       path,
       ...routeMiddleware,
       async (req: Request, res: Response) => {

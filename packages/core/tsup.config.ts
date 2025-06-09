@@ -1,3 +1,5 @@
+import { cp } from "fs/promises";
+import { resolve } from "path";
 import { defineConfig } from "tsup";
 
 export default defineConfig({
@@ -10,5 +12,11 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: false,
-  target: "es2020"
+  target: "es2020",
+  bundle: true,
+  onSuccess: async () => {
+    const src = resolve(__dirname, "src/runtime/managers/prompts");
+    const dest = resolve(__dirname, "dist/prompts");
+    await cp(src, dest, { recursive: true });
+  }
 });
