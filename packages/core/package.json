@@ -51,6 +51,9 @@
     "dev": "tsup --config ./tsup.config.ts --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit false",
     "build": "tsup --config ./tsup.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
     "clean": "rm -rf dist"
   },
   "dependencies": {
