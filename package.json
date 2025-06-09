@@ -37,6 +37,7 @@
     "typecheck": "nx run-many --target typecheck --projects packages/* --verbose",
     "lint": "nx run-many --target eslint:lint --projects packages/*,apps/* --verbose",
     "test": "nx run-many --target test --projects packages/*,apps/* --verbose",
+    "clean": "nx run-many --target clean --projects packages/*,apps/* --verbose",
     "eslint": "eslint . --max-warnings 0",
     "commit": "cz",
     "commitlint": "commitlint --edit",
