@@ -33,8 +33,8 @@ jobs:
           configFile: .commitlintrc.ts
           helpURL: https://github.com/conventional-changelog/commitlint/#what-is-commitlint
 
-  build-lint:
-    name: 🧱🧹 Build Packages and Lint Codebase
+  build-typecheck-lint:
+    name: 🧱🧹 Build Packages & Typecheck/Lint Codebase
     runs-on: ubuntu-latest
     steps:
       - name: 🛒 Checkout
@@ -53,3 +53,17 @@ jobs:
 
       - name: 🧹 Lint
         run: pnpm lint
+
+  test:
+    name: 🧪 Test Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup
+
+      - name: 🧪 Run Tests
+        run: pnpm test
