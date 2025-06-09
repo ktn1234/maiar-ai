@@ -1,3 +1,23 @@
+## 0.25.0-alpha.0 (2025-06-09)
+
+### 🚀 Features
+
+- dynamic resolvable plugin metadata ([#162](https://github.com/UraniumCorporation/maiar-ai/pull/162))
+- update prompt system to use template files ([#161](https://github.com/UraniumCorporation/maiar-ai/pull/161))
+
+### 🩹 Fixes
+
+- hot reloading fails due to hanging node process ([#163](https://github.com/UraniumCorporation/maiar-ai/pull/163))
+
+### ✅ Tests
+
+- **config:** 🧪🔧 standup vitest ([#164](https://github.com/UraniumCorporation/maiar-ai/pull/164))
+
+### ❤️ Thank You
+
+- ktn1234 @ktn1234
+- pbit @0xPBIT
+
 ## 0.24.0 (2025-05-27)
 
 ### 🚀 Features
