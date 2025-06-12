@@ -1,0 +1,59 @@
+{
+  "name": "create-maiar",
+  "version": "0.25.0-alpha.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "create-maiar": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Maiar: A Composable, Plugin-Based AI Agent Framework",
+  "keywords": [
+    "ai",
+    "agent",
+    "framework",
+    "plugin",
+    "cli"
+  ],
+  "author": "UraniumCorporation <contact@maiar.dev> (https://maiar.dev)",
+  "license": "MIT",
+  "homepage": "https://maiar.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UraniumCorporation/maiar-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UraniumCorporation/maiar-ai/issues"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm run build",
+    "dev": "tsup --config ./tsup.config.ts --watch",
+    "typecheck": "tsc --project tsconfig.json --noEmit false",
+    "build": "tsup --config ./tsup.config.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@clack/prompts": "0.11.0",
+    "commander": "14.0.0",
+    "liquidjs": "10.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.1",
+    "tsup": "8.3.6",
+    "typescript": "5.7.3"
+  }
+}

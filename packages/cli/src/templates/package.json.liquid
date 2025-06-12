@@ -1,0 +1,28 @@
+{
+  "name": "{{ projectName }}",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@maiar-ai/core": "latest",
+    "@maiar-ai/memory-sqlite": "latest",
+    "@maiar-ai/model-openai": "latest",
+    "@maiar-ai/plugin-character": "latest",
+    "@maiar-ai/plugin-image": "latest",
+    "@maiar-ai/plugin-text": "latest",
+    "dotenv": "16.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.1",
+    "typescript": "5.7.3"
+  }
+}
